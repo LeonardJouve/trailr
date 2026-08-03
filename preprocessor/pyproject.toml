@@ -1,0 +1,42 @@
+[project]
+name = "preprocessor"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Léonard Jouve", email = "leonard.jouve@gmail.com" }
+]
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "geopandas>=1.1.4",
+    "pyogrio>=0.13.0",
+    "shapely>=2.1.2",
+]
+
+[project.scripts]
+sample = "preprocessor.sample:main"
+graph = "preprocessor.graph:main"
+
+[build-system]
+requires = ["uv_build>=0.12.1,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # bugbear
+    "SIM", # simplify
+    "C4",  # comprehensions
+    "PIE", # misc improvements
+    "RUF", # Ruff-specific
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.ty.rules]
+all = "error"
