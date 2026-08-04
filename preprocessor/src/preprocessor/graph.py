@@ -6,14 +6,20 @@ from shapely.ops import snap, split
 from shapely.strtree import STRtree
 
 
-def endpoints(line):
-    return [
-        Point(line.coords[0]),
-        Point(line.coords[-1]),
-    ]
+def edge_endpoints(edge: LineString) -> tuple[Point, Point]:
+    return (
+        Point(edge[0]),
+        Point(edge[-1]),
+    )
 
-def extract_intersections(lines: gpd.GeoDataFrame) -> list[Point]:
-    geometries = list(lines.geometry)
+def point_key(point: Point, precision: int = 2) -> tuple[float, float]:
+    return (
+        round(point.x, precision),
+        round(point.y, precision),
+    )
+
+def extract_intersections(trails: gpd.GeoDataFrame) -> list[Point]:
+    geometries = list(trails.geometry)
 
     tree = STRtree(geoms=geometries)
 
@@ -40,6 +46,14 @@ def extract_intersections(lines: gpd.GeoDataFrame) -> list[Point]:
                 points.extend(intersection.geoms)
 
     return points
+
+def extract_endpoints(trails: gpd.GeoDataFrame) -> list[Point]:
+    result: list[Point] = []
+
+    for geom in trails.geometry:
+        result.extend(list(edge_endpoints(geom.coords)))
+
+    return result
 
 def split_edges(
     trails: gpd.GeoDataFrame,
@@ -68,7 +82,6 @@ def split_edges(
 
             edge = row.copy()
             edge.geometry = segment
-
             edges.append(edge)
 
     return gpd.GeoDataFrame(
@@ -78,38 +91,23 @@ def split_edges(
 
 def create_node_index(
     nodes: list[Point],
-    precision: int = 2,
 ) -> tuple[list[Point], dict[tuple[float, float], int]]:
+    # TODO: use STRTree
     unique: dict[tuple[float, float], Point] = {}
 
     for point in nodes:
-        key = (
-            round(point.x, precision),
-            round(point.y, precision),
-        )
+        key = point_key(point)
 
         unique[key] = point
 
     node_list = list(unique.values())
 
     node_index: dict[tuple[float, float], int] = {
-        (
-            round(point.x, precision),
-            round(point.y, precision),
-        ): i
+        point_key(point): i
         for i, point in enumerate(node_list)
     }
 
     return node_list, node_index
-
-def point_key(
-    point: Point,
-    precision: int = 2,
-) -> tuple[float, float]:
-    return (
-        round(point.x, precision),
-        round(point.y, precision),
-    )
 
 def attach_node_ids(
     edges: gpd.GeoDataFrame,
@@ -122,16 +120,11 @@ def attach_node_ids(
     to_nodes = []
 
     for geom in edges.geometry:
-        start = Point(geom.coords[0])
-        end = Point(geom.coords[-1])
+        (start, end) = edge_endpoints(geom.coords)
 
-        from_nodes.append(
-            node_index[point_key(start)]
-        )
+        from_nodes.append(node_index[point_key(start)])
 
-        to_nodes.append(
-            node_index[point_key(end)]
-        )
+        to_nodes.append(node_index[point_key(end)])
 
     edges["from_node"] = from_nodes
     edges["to_node"] = to_nodes
@@ -140,67 +133,43 @@ def attach_node_ids(
 
 def main():
     INPUT_GDB = Path("./data/sample_wanderwege.gdb")
+    OUTPUT_EDGES_GDB = Path("./data/sample_edges.gdb")
+    OUTPUT_NODES_GDB = Path("./data/sample_nodes.gdb")
     LAYER = "TLM_STRASSE"
 
-    trails: gpd.GeoDataFrame = gpd.read_file(
-        INPUT_GDB,
-        layer=LAYER,
-    )
-
-    nodes: list[Point] = []
-
-    nodes.extend(extract_intersections(trails))
-
+    trails: gpd.GeoDataFrame = gpd.read_file(INPUT_GDB, layer=LAYER)
     trails: gpd.GeoDataFrame = (
         trails
         .reset_index()
         .rename(columns={"index": "feature_id"})
     ) # ty:ignore[invalid-assignment]
 
-    trails: gpd.GeoDataFrame = trails.explode(
-        index_parts=True
-    ).reset_index(drop=True)  # ty:ignore[invalid-assignment]
+    trails: gpd.GeoDataFrame = (
+        trails
+        .explode(index_parts=False)
+        .reset_index(drop=True)
+    ) # ty:ignore[invalid-assignment]
 
-    for geom in trails.geometry:
-        nodes.extend(endpoints(geom))
+    nodes = (extract_intersections(trails) + extract_endpoints(trails))
 
-    edges = split_edges(
-        trails=trails,
-        nodes=nodes,
-    )
+    node_points, node_index = create_node_index(nodes)
+    edges = split_edges(trails=trails, nodes=nodes)
 
-    node_points, node_index = create_node_index(
-        nodes
-    )
-
-    print(
-        f"Graph nodes: {len(node_points)}"
-    )
     nodes_gdf = gpd.GeoDataFrame(
-        {
-            "id": range(len(node_points)),
-        },
+        data={"id": range(len(node_points))},
         geometry=node_points,
         crs=trails.crs,
     )
-    print(nodes_gdf)
-
     nodes_gdf.to_file(
-        Path("./data/sample_nodes.gdb"),
+        OUTPUT_NODES_GDB,
         layer=LAYER,
         driver="OpenFileGDB",
         engine="pyogrio",
     )
 
-
-    edges_gdf = attach_node_ids(
-        edges,
-        node_index,
-    )
-    print(edges_gdf)
-
+    edges_gdf = attach_node_ids(edges, node_index)
     edges_gdf.to_file(
-        Path("./data/sample_edges.gdb"),
+        OUTPUT_EDGES_GDB,
         layer=LAYER,
         driver="OpenFileGDB",
         engine="pyogrio",
