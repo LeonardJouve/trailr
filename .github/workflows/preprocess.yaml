@@ -32,9 +32,15 @@ jobs:
 
       - name: Extract GDB
         run: |
-          unzip data/wanderwege.gdb.zip -d data/
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full
+          7z x data/wanderwege.gdb.zip -odata
           echo "Contents of data:"
           find data -maxdepth 2 -type d -print
+        # run: |
+        #   unzip data/wanderwege.gdb.zip -d data/
+        #   echo "Contents of data:"
+        #   find data -maxdepth 2 -type d -print
 
       # mv data/SWISSTLM3D_WANDERWEGE.gdb data/wanderwege.gdb
       # - name: Run preprocessor
