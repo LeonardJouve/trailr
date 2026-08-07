@@ -35,6 +35,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y p7zip-full
           7z x data/wanderwege.gdb.zip -odata
+          find data -name "*.gdb" -type d
           mv data/*.gdb data/wanderwege.gdb
       - name: Run preprocessor
         run: |
