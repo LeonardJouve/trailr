@@ -5,6 +5,7 @@ from shapely.geometry import LineString, MultiPoint, Point
 from shapely.ops import snap, split
 from shapely.strtree import STRtree
 
+PointKey = tuple[float, float]
 
 def edge_endpoints(edge: LineString) -> tuple[Point, Point]:
     return (
@@ -12,7 +13,8 @@ def edge_endpoints(edge: LineString) -> tuple[Point, Point]:
         Point(edge[-1]),
     )
 
-def point_key(point: Point, precision: int = 2) -> tuple[float, float]:
+def point_key(point: Point) -> PointKey:
+    precision = 2
     return (
         round(point.x, precision),
         round(point.y, precision),
@@ -59,22 +61,14 @@ def split_edges(
     trails: gpd.GeoDataFrame,
     nodes: list[Point],
 ) -> gpd.GeoDataFrame:
-
     splitter = MultiPoint(nodes)
 
     edges = []
 
     for _, row in trails.iterrows():
-        geom = snap(
-            row.geometry,
-            splitter,
-            0.01,
-        )
+        geom = snap(row.geometry, splitter, 0.01)
 
-        result = split(
-            geom,
-            splitter,
-        )
+        result = split(geom, splitter)
 
         for segment in result.geoms:
             if segment.length == 0:
@@ -91,29 +85,24 @@ def split_edges(
 
 def create_node_index(
     nodes: list[Point],
-) -> tuple[list[Point], dict[tuple[float, float], int]]:
-    # TODO: use STRTree
-    unique: dict[tuple[float, float], Point] = {}
+) -> tuple[list[Point], dict[PointKey, int]]:
+    node_points: list[Point] = []
+    node_index: dict[PointKey, int] = {}
 
     for point in nodes:
         key = point_key(point)
+        if key in node_index:
+            continue
 
-        unique[key] = point
+        node_index[key] = len(node_points)
+        node_points.append(point)
 
-    node_list = list(unique.values())
-
-    node_index: dict[tuple[float, float], int] = {
-        point_key(point): i
-        for i, point in enumerate(node_list)
-    }
-
-    return node_list, node_index
+    return node_points, node_index
 
 def attach_node_ids(
     edges: gpd.GeoDataFrame,
-    node_index: dict[tuple[float, float], int],
+    node_index: dict[PointKey, int],
 ) -> gpd.GeoDataFrame:
-
     edges = edges.copy()
 
     from_nodes = []
@@ -128,6 +117,9 @@ def attach_node_ids(
 
     edges["from_node"] = from_nodes
     edges["to_node"] = to_nodes
+
+    int_columns = edges.select_dtypes(include=["int64"]).columns
+    edges[int_columns] = edges[int_columns].astype("int32")
 
     return edges
 
@@ -160,6 +152,7 @@ def main():
         geometry=node_points,
         crs=trails.crs,
     )
+    nodes_gdf["id"] = nodes_gdf["id"].astype("int32")
     nodes_gdf.to_file(
         OUTPUT_NODES_GDB,
         layer=LAYER,
