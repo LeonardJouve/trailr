@@ -30,23 +30,27 @@ jobs:
             -O data/wanderwege.gdb.zip \
             "https://data.geo.admin.ch/ch.swisstopo.swisstlm3d-wanderwege/swisstlm3d-wanderwege/swisstlm3d-wanderwege_2056_5728.gdb.zip"
 
-      - name: Extract GDB
+      - name: Install 7zip
         run: |
           sudo apt-get update
           sudo apt-get install -y p7zip-full
-          7z x data/wanderwege.gdb.zip -odata
-          find data -name "*.gdb" -type d
-          mv data/*.gdb data/wanderwege.gdb
-      - name: Run preprocessor
-        run: |
-          mkdir -p output
-          uv run graph \
-            ./data/wanderwege.gdb \
-            ./output \
-            TLM_STRASSE
 
-      - name: Upload output
-        uses: actions/upload-artifact@v4
-        with:
-          name: trails
-          path: preprocessor/output/
+      - name: Extract GDB
+        run: |
+          7z x data/wanderwege.gdb.zip -odata
+          ls -la
+          find data -name "*.gdb" -type d
+      # - name: Run preprocessor
+      # mv data/*.gdb data/wanderwege.gdb
+      #   run: |
+      #     mkdir -p output
+      #     uv run graph \
+      #       ./data/wanderwege.gdb \
+      #       ./output \
+      #       TLM_STRASSE
+
+      # - name: Upload output
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: trails
+      #     path: preprocessor/output/
