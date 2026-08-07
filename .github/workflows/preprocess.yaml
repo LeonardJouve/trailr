@@ -33,13 +33,11 @@ jobs:
       - name: Extract GDB
         run: |
           unzip data/wanderwege.gdb.zip -d data/
-          mv data/*.gdb data/wanderwege.gdb
-
-      - name: Create output folder
-        run: mkdir -p output
+          mv data/SWISSTLM3D_WANDERWEGE.gdb data/wanderwege.gdb
 
       - name: Run preprocessor
         run: |
+          mkdir -p output
           uv run graph \
             ./data/wanderwege.gdb \
             ./output \
