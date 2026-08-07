@@ -33,6 +33,7 @@ jobs:
       - name: Extract GDB
         run: |
           unzip data/wanderwege.gdb.zip -d data/
+          ls -la data/
           mv data/SWISSTLM3D_WANDERWEGE.gdb data/wanderwege.gdb
 
       - name: Run preprocessor
