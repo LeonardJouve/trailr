@@ -33,7 +33,7 @@ jobs:
       - name: Extract GDB
         run: |
           unzip data/wanderwege.gdb.zip -d data/
-          mv data/swisstlm3d-wanderwege_2056_5728.gdb data/wanderwege.gdb
+          mv data/*.gdb data/wanderwege.gdb
 
       - name: Create output folder
         run: mkdir -p output
