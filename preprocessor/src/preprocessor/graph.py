@@ -1,3 +1,5 @@
+import argparse
+import json
 from pathlib import Path
 
 import geopandas as gpd
@@ -5,7 +7,7 @@ from shapely.geometry import LineString, MultiPoint, Point
 from shapely.ops import snap, split
 from shapely.strtree import STRtree
 
-PointKey = tuple[float, float]
+PointKey = tuple[float, float, float]
 
 def edge_endpoints(edge: LineString) -> tuple[Point, Point]:
     return (
@@ -18,6 +20,7 @@ def point_key(point: Point) -> PointKey:
     return (
         round(point.x, precision),
         round(point.y, precision),
+        round(point.z, precision),
     )
 
 def extract_intersections(trails: gpd.GeoDataFrame) -> list[Point]:
@@ -124,12 +127,22 @@ def attach_node_ids(
     return edges
 
 def main():
-    INPUT_GDB = Path("./data/sample_wanderwege.gdb")
-    OUTPUT_EDGES_GDB = Path("./data/sample_edges.gdb")
-    OUTPUT_NODES_GDB = Path("./data/sample_nodes.gdb")
-    LAYER = "TLM_STRASSE"
+    parser = argparse.ArgumentParser(description="GDB trail preprocess")
+    parser.add_argument("input_gdb", type=Path, help="Input GeoDatabase path")
+    parser.add_argument("output_folder", type=Path, help="Output folder")
+    parser.add_argument("layer", type=str, help="Input layer name")
+    args = parser.parse_args()
+    input_gdb: Path = args.input_gdb
+    output_folder: Path = args.output_folder
+    layer: str = args.layer
 
-    trails: gpd.GeoDataFrame = gpd.read_file(INPUT_GDB, layer=LAYER)
+    gdb_file = input_gdb.stem
+    output_edges_gdb = output_folder / f"{gdb_file}_edges.gdb"
+    output_edges_csv = output_folder / f"{gdb_file}_edges.csv"
+    output_nodes_gdb = output_folder / f"{gdb_file}_nodes.gdb"
+    output_nodes_csv = output_folder / f"{gdb_file}_nodes.csv"
+
+    trails: gpd.GeoDataFrame = gpd.read_file(input_gdb, layer=layer)
     trails: gpd.GeoDataFrame = (
         trails
         .reset_index()
@@ -154,16 +167,54 @@ def main():
     )
     nodes_gdf["id"] = nodes_gdf["id"].astype("int32")
     nodes_gdf.to_file(
-        OUTPUT_NODES_GDB,
-        layer=LAYER,
+        output_nodes_gdb,
+        layer=layer,
         driver="OpenFileGDB",
         engine="pyogrio",
     )
+    node_attributes = [
+        "id",
+        "x",
+        "y",
+        "z",
+    ]
+    nodes_gdf["x"] = nodes_gdf.geometry.x
+    nodes_gdf["y"] = nodes_gdf.geometry.y
+    nodes_gdf["z"] = nodes_gdf.geometry.z
+    nodes_gdf[node_attributes].to_csv(output_nodes_csv, index=False)
 
     edges_gdf = attach_node_ids(edges, node_index)
+    field_mapping = {
+        "UUID": "uuid",
+        "WANDERWEGE": "trail_type",
+        "STUFE": "difficulty",
+        "BEFAHRBARKEIT": "accessibility",
+        "VERKEHRSBESCHRAENKUNG": "traffic_restriction",
+        "BELAGSART": "surface_type",
+        "KUNSTBAUTE": "structure_type",
+    }
+    edges_gdf = edges_gdf.rename(columns=field_mapping)
     edges_gdf.to_file(
-        OUTPUT_EDGES_GDB,
-        layer=LAYER,
+        output_edges_gdb,
+        layer=layer,
         driver="OpenFileGDB",
         engine="pyogrio",
     )
+    edge_attributes = [
+        "uuid",
+        "trail_type",
+        "difficulty",
+        "accessibility",
+        "traffic_restriction",
+        "surface_type",
+        "structure_type",
+        "from_node",
+        "to_node",
+        "length",
+        "coords",
+    ]
+    edges_gdf["length"] = edges.geometry.length
+    edges_gdf["coords"] = edges_gdf.geometry.apply(
+        lambda geom: json.dumps(list(map(list, geom.coords)))
+    )
+    edges_gdf[edge_attributes].to_csv(output_edges_csv, index=False)
