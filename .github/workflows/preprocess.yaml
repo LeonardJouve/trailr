@@ -38,19 +38,17 @@ jobs:
       - name: Extract GDB
         run: |
           bsdtar -xf data/wanderwege.gdb.zip -C data/
-          ls -la ./data
-          find data -name "*.gdb" -type d
-      # - name: Run preprocessor
-      # mv data/*.gdb data/wanderwege.gdb
-      #   run: |
-      #     mkdir -p output
-      #     uv run graph \
-      #       ./data/wanderwege.gdb \
-      #       ./output \
-      #       TLM_STRASSE
+          mv data/*.gdb data/wanderwege.gdb
+      - name: Run preprocessor
+        run: |
+          mkdir -p output
+          uv run graph \
+            ./data/wanderwege.gdb \
+            ./output \
+            TLM_STRASSE
 
-      # - name: Upload output
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: trails
-      #     path: preprocessor/output/
+      - name: Upload output
+        uses: actions/upload-artifact@v4
+        with:
+          name: trails
+          path: preprocessor/output/
