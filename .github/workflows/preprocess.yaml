@@ -35,24 +35,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y p7zip-full
           7z x data/wanderwege.gdb.zip -odata
-          echo "Contents of data:"
-          find data -maxdepth 2 -type d -print
-        # run: |
-        #   unzip data/wanderwege.gdb.zip -d data/
-        #   echo "Contents of data:"
-        #   find data -maxdepth 2 -type d -print
+          mv data/*.gdb data/wanderwege.gdb
+      - name: Run preprocessor
+        run: |
+          mkdir -p output
+          uv run graph \
+            ./data/wanderwege.gdb \
+            ./output \
+            TLM_STRASSE
 
-      # mv data/SWISSTLM3D_WANDERWEGE.gdb data/wanderwege.gdb
-      # - name: Run preprocessor
-      #   run: |
-      #     mkdir -p output
-      #     uv run graph \
-      #       ./data/wanderwege.gdb \
-      #       ./output \
-      #       TLM_STRASSE
-
-      # - name: Upload output
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: trails
-      #     path: preprocessor/output/
+      - name: Upload output
+        uses: actions/upload-artifact@v4
+        with:
+          name: trails
+          path: preprocessor/output/
