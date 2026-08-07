@@ -38,7 +38,7 @@ jobs:
       - name: Extract GDB
         run: |
           7z x data/wanderwege.gdb.zip -odata
-          ls -la
+          ls -la ./data
           find data -name "*.gdb" -type d
       # - name: Run preprocessor
       # mv data/*.gdb data/wanderwege.gdb
