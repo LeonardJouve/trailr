@@ -1,5 +1,7 @@
 import argparse
 import json
+import logging
+import time
 from pathlib import Path
 
 import geopandas as gpd
@@ -8,6 +10,19 @@ from shapely.ops import snap, split
 from shapely.strtree import STRtree
 
 PointKey = tuple[float, float, float]
+
+logger = logging.getLogger("graph")
+
+def log_progress(step: str, i: int, total: int, start: float) -> None:
+    period = max(1, total // 100)
+    if i % period == 0 or i == total:
+        logger.info(
+            "%s %d/%d (%.1f s)",
+            step,
+            i,
+            total,
+            time.perf_counter() - start,
+        )
 
 def edge_endpoints(edge: LineString) -> tuple[Point, Point]:
     return (
@@ -30,13 +45,18 @@ def extract_intersections(trails: gpd.GeoDataFrame) -> list[Point]:
 
     points: list[Point] = []
 
-    for i, geom in enumerate(geometries):
+    total = len(geometries)
+    start = time.perf_counter()
+
+    for i, geom in enumerate(geometries, start=1):
+        log_progress("intersections", i, total, start)
+
         # Find possible intersections using spatial index
         candidates = tree.query(geom)
 
         for j in candidates:
             # Avoid comparing the geometry with itself
-            if i >= j:
+            if i - 1 >= j:
                 continue
 
             intersection = geom.intersection(geometries[j])
@@ -60,31 +80,52 @@ def extract_endpoints(trails: gpd.GeoDataFrame) -> list[Point]:
 
     return result
 
+def split_at_points(
+    geom: LineString,
+    points: list[Point],
+    tolerance: float = 0.01,
+) -> list[LineString]:
+    if not points:
+        return [geom]
+
+    splitter = MultiPoint(points)
+    snapped = snap(geom, splitter, tolerance)
+
+    segments: list[LineString] = []
+
+    for segment in split(snapped, splitter).geoms:
+        if segment.length > 0:
+            segments.append(segment)
+
+    return segments
+
 def split_edges(
     trails: gpd.GeoDataFrame,
     nodes: list[Point],
 ) -> gpd.GeoDataFrame:
-    splitter = MultiPoint(nodes)
+    node_tree = STRtree(nodes)
 
-    edges = []
+    geometries = trails.geometry.to_numpy()
 
-    for _, row in trails.iterrows():
-        geom = snap(row.geometry, splitter, 0.01)
+    segment_indices: list[int] = []
+    segments: list[LineString] = []
 
-        result = split(geom, splitter)
+    total = len(geometries)
+    start = time.perf_counter()
 
-        for segment in result.geoms:
-            if segment.length == 0:
-                continue
+    for i, geom in enumerate(geometries, start=1):
+        log_progress("split_edges", i, total, start)
 
-            edge = row.copy()
-            edge.geometry = segment
-            edges.append(edge)
+        nearby = [nodes[j] for j in node_tree.query(geom)]
 
-    return gpd.GeoDataFrame(
-        edges,
-        crs=trails.crs,
-    )
+        for segment in split_at_points(geom, nearby):
+            segment_indices.append(i - 1)
+            segments.append(segment)
+
+    edges = trails.loc[segment_indices].reset_index(drop=True)
+    edges["geometry"] = segments
+
+    return edges
 
 def create_node_index(
     nodes: list[Point],
@@ -111,12 +152,17 @@ def attach_node_ids(
     from_nodes = []
     to_nodes = []
 
-    for geom in edges.geometry:
-        (start, end) = edge_endpoints(geom.coords)
+    total = len(edges)
+    start = time.perf_counter()
 
-        from_nodes.append(node_index[point_key(start)])
+    for i, geom in enumerate(edges.geometry, start=1):
+        log_progress("node_ids", i, total, start)
 
-        to_nodes.append(node_index[point_key(end)])
+        (start_point, end_point) = edge_endpoints(geom.coords)
+
+        from_nodes.append(node_index[point_key(start_point)])
+
+        to_nodes.append(node_index[point_key(end_point)])
 
     edges["from_node"] = from_nodes
     edges["to_node"] = to_nodes
@@ -136,11 +182,19 @@ def main():
     output_folder: Path = args.output_folder
     layer: str = args.layer
 
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)-8s %(name)s %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
     gdb_file = input_gdb.stem
     output_edges_gdb = output_folder / f"{gdb_file}_edges.gdb"
     output_edges_csv = output_folder / f"{gdb_file}_edges.csv"
     output_nodes_gdb = output_folder / f"{gdb_file}_nodes.gdb"
     output_nodes_csv = output_folder / f"{gdb_file}_nodes.csv"
+
+    pipeline_start = time.perf_counter()
 
     trails: gpd.GeoDataFrame = gpd.read_file(input_gdb, layer=layer)
     trails: gpd.GeoDataFrame = (
@@ -154,11 +208,15 @@ def main():
         .explode(index_parts=False)
         .reset_index(drop=True)
     ) # ty:ignore[invalid-assignment]
+    logger.info("loaded %d features", len(trails))
 
     nodes = (extract_intersections(trails) + extract_endpoints(trails))
 
     node_points, node_index = create_node_index(nodes)
+    logger.info("built %d nodes from %d points", len(node_points), len(nodes))
+
     edges = split_edges(trails=trails, nodes=nodes)
+    logger.info("built %d edges", len(edges))
 
     nodes_gdf = gpd.GeoDataFrame(
         data={"id": range(len(node_points))},
@@ -218,3 +276,8 @@ def main():
         lambda geom: json.dumps(list(map(list, geom.coords)))
     )
     edges_gdf[edge_attributes].to_csv(output_edges_csv, index=False)
+
+    logger.info(
+        "pipeline done in %.2f s",
+        time.perf_counter() - pipeline_start,
+    )
