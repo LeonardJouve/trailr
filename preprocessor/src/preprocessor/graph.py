@@ -230,49 +230,60 @@ def main():
         driver="OpenFileGDB",
         engine="pyogrio",
     )
+    nodes_field_mapping = {
+        "id": "id:ID",
+        "x": "x:double",
+        "y": "y:double",
+        "z": "z:double",
+    }
+    nodes_gdf = nodes_gdf.rename(columns=nodes_field_mapping)
     node_attributes = [
-        "id",
-        "x",
-        "y",
-        "z",
+        "id:ID",
+        "x:double",
+        "y:double",
+        "z:double",
     ]
-    nodes_gdf["x"] = nodes_gdf.geometry.x
-    nodes_gdf["y"] = nodes_gdf.geometry.y
-    nodes_gdf["z"] = nodes_gdf.geometry.z
+    nodes_gdf["x:double"] = nodes_gdf.geometry.x
+    nodes_gdf["y:double"] = nodes_gdf.geometry.y
+    nodes_gdf["z:double"] = nodes_gdf.geometry.z
     nodes_gdf[node_attributes].to_csv(output_nodes_csv, index=False)
 
     edges_gdf = attach_node_ids(edges, node_index)
-    field_mapping = {
-        "UUID": "uuid",
-        "WANDERWEGE": "trail_type",
-        "STUFE": "difficulty",
-        "BEFAHRBARKEIT": "accessibility",
-        "VERKEHRSBESCHRAENKUNG": "traffic_restriction",
-        "BELAGSART": "surface_type",
-        "KUNSTBAUTE": "structure_type",
-    }
-    edges_gdf = edges_gdf.rename(columns=field_mapping)
     edges_gdf.to_file(
         output_edges_gdb,
         layer=layer,
         driver="OpenFileGDB",
         engine="pyogrio",
     )
+    edges_field_mapping = {
+        "UUID": "uuid:string",
+        "WANDERWEGE": "trail_type:int",
+        "STUFE": "difficulty:int",
+        "BEFAHRBARKEIT": "accessibility:int",
+        "VERKEHRSBESCHRAENKUNG": "traffic_restriction:int",
+        "BELAGSART": "surface_type:int",
+        "KUNSTBAUTE": "structure_type:int",
+        "from_node": "from_node:START_ID",
+        "to_node": "to_node:END_ID",
+    }
+    edges_gdf = edges_gdf.rename(columns=edges_field_mapping)
     edge_attributes = [
-        "uuid",
-        "trail_type",
-        "difficulty",
-        "accessibility",
-        "traffic_restriction",
-        "surface_type",
-        "structure_type",
-        "from_node",
-        "to_node",
-        "length",
-        "coords",
+        "uuid:string",
+        "trail_type:int",
+        "difficulty:int",
+        "accessibility:int",
+        "traffic_restriction:int",
+        "surface_type:int",
+        "structure_type:int",
+        "from_node:START_ID",
+        "to_node:END_ID",
+        "length:float",
+        "coords:string",
+        ":TYPE",
     ]
-    edges_gdf["length"] = edges.geometry.length
-    edges_gdf["coords"] = edges_gdf.geometry.apply(
+    edges_gdf["length:float"] = edges.geometry.length
+    edges_gdf[":TYPE"] = "EDGE"
+    edges_gdf["coords:string"] = edges_gdf.geometry.apply(
         lambda geom: json.dumps(list(map(list, geom.coords)))
     )
     edges_gdf[edge_attributes].to_csv(output_edges_csv, index=False)

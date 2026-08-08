@@ -24,14 +24,7 @@ uv sync
 
 Extract a subset of the original GeoDatabase:
 ```
-uv run sample \
-  ./data/SWISSTLM3D_WANDERWEGE.gdb \
-  ./data/sample_wanderwege.gdb \
-  TLM_STRASSE \
-  2549964 \
-  1129324 \
-  2557827 \
-  1139584
+uv run sample ./data/SWISSTLM3D_WANDERWEGE.gdb ./data/sample_wanderwege.gdb TLM_STRASSE 2549964 1129324 2557827 1139584
 ```
 
 Arguments:
@@ -43,10 +36,7 @@ sample <input_gdb> <output_gdb> <layer> <minx> <miny> <maxx> <maxy>
 
 Run the graph preprocessing:
 ```
-uv run graph \
-  ./data/sample_wanderwege.gdb \
-  ./data \
-  TLM_STRASSE
+uv run graph ./data/SWISSTLM3D_WANDERWEGE.gdb ./data TLM_STRASSE
 ````
 
 Arguments:
