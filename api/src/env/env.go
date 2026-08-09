@@ -20,7 +20,7 @@ func Load(envFile string) (func(), error) {
 	envPath := path.Join(path.Dir(executable), envFile)
 	file, err := os.Open(envPath)
 	if err != nil {
-		panic(err)
+		return func() {}, err
 	}
 
 	scanner := bufio.NewScanner(file)

@@ -1,12 +1,10 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"os"
 
+	"github.com/LeonardJouve/trailr/api/src/database"
 	"github.com/LeonardJouve/trailr/api/src/env"
-	"github.com/neo4j/neo4j-go-driver/v6/neo4j"
 )
 
 func main() {
@@ -18,20 +16,9 @@ func main() {
 		defer restore()
 	}
 
-	ctx := context.Background()
-
-	driver, err := neo4j.NewDriver(
-		os.Getenv("DATABASE_URI"),
-		neo4j.BasicAuth(os.Getenv("DATABASE_USER"), os.Getenv("DATABASE_PASSWORD"), ""),
-	)
+	db, err := database.New(os.Getenv("DATABASE_URI"), os.Getenv("DATABASE_USER"), os.Getenv("DATABASE_PASSWORD"))
 	if err != nil {
 		panic(err)
 	}
-	defer driver.Close(ctx)
-
-	err = driver.VerifyConnectivity(ctx)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("Connection established.")
+	defer db.Close()
 }
