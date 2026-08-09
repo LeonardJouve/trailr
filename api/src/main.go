@@ -2,7 +2,9 @@ package main
 
 import (
 	"os"
+	"strconv"
 
+	"github.com/LeonardJouve/trailr/api/src/api"
 	"github.com/LeonardJouve/trailr/api/src/database"
 	"github.com/LeonardJouve/trailr/api/src/env"
 )
@@ -21,4 +23,15 @@ func main() {
 		panic(err)
 	}
 	defer db.Close()
+
+	port, err := strconv.ParseInt(os.Getenv("API_PORT"), 10, 32)
+	if err != nil {
+		panic(err)
+	}
+
+	stop, err := api.Start(int(port))
+	if err != nil {
+		panic(err)
+	}
+	defer stop()
 }
