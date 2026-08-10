@@ -9,12 +9,36 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/LeonardJouve/trailr/api/src/database"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
+	"github.com/neo4j/neo4j-go-driver/v6/neo4j"
 )
 
 func healthcheck(c *echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func trail(c *echo.Context) error {
+	// ""
+
+	db, err := database.GetInstance()
+	if err != nil {
+		return err
+	}
+
+	records, err := database.Query(
+		db,
+		`MATCH (origin:Node{id: "1"})
+        MATCH path = (origin)-[:EDGE*]-(n:Node)
+        WITH n, path, reduce(distance = 0, r IN relationships(path) | distance + r.length) AS distance
+        WHERE distance <= 5000
+        UNWIND relationships(path) AS edge
+        RETURN DISTINCT n, edge, distance
+        ORDER BY distance`,
+		map[string]any{},
+		func(r *neo4j.Record) {},
+	)
 }
 
 func Start(port int) (func(), error) {
