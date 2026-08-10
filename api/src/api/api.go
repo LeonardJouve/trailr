@@ -9,41 +9,54 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/LeonardJouve/trailr/api/src/trail"
+	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 )
+
+var validate = validator.New(validator.WithRequiredStructEnabled())
 
 func healthcheck(c *echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 }
 
-func trail(c *echo.Context) error {
-	// db, err := database.GetInstance()
-	// if err != nil {
-	// 	return err
-	// }
+type TrailRequest struct {
+	X      float64 `json:"x"`
+	Y      float64 `json:"y"`
+	Z      float64 `json:"z"`
+	Length uint    `json:"length" validate:"gt=0,lte=30000"`
+}
 
-	// records, err := database.Query[*database.Database](
-	// 	db,
-	// 	`
-	//     MATCH (origin:Node{id: $id})
-	//     MATCH path = (origin)-[:EDGE*]-(n:Node)
-	//     WITH n, path, reduce(distance = 0, r IN relationships(path) | distance + r.length) AS distance
-	//     WHERE distance <= $distance
-	//     UNWIND relationships(path) AS edge
-	//     RETURN DISTINCT n, edge, distance
-	//     ORDER BY distance
-	//     `,
-	// 	map[string]any{
-	// 		"id":       "TODO",
-	// 		"distance": "TODO",
-	// 	},
-	// 	func(r *neo4j.Record) (*database.Database, error) {
-	// 		return &database.Database{}, nil
-	// 	},
-	// )
+func findTrail(c *echo.Context) error {
+	var request TrailRequest
 
-	return nil
+	if err := c.Bind(&request); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
+	}
+
+	if err := validate.Struct(request); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	origin, err := trail.GetClosestNode(request.X, request.Y, request.Z)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to find closest node")
+	}
+
+	graph, err := trail.CreateGraph(origin, request.Length)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to create graph")
+	}
+
+	defer trail.DropGraph(graph)
+
+	result, err := trail.GetReachableGraph(origin, graph, request.Length)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to find reachable graph")
+	}
+
+	return c.JSON(http.StatusOK, result)
 }
 
 func Start(port int) (func(), error) {
@@ -53,7 +66,7 @@ func Start(port int) (func(), error) {
 	e.Use(middleware.Recover())
 
 	e.GET("/healthcheck", healthcheck)
-	e.GET("/trail", trail)
+	e.GET("/trail", findTrail)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 

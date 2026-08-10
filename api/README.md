@@ -66,3 +66,8 @@ UNWIND nodes AS a
 MATCH (a)-[e:EDGE]-(b:Node)
 WHERE b IN nodes
 RETURN DISTINCT a, e, b;
+
+// drop graph
+CALL gds.graph.drop($name)
+YIELD graphName
+RETURN graphName;
