@@ -1,12 +1,13 @@
 package database
 
 import (
+	"cmp"
 	"embed"
 	"errors"
 	"fmt"
 	"io/fs"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -33,12 +34,12 @@ func (d *Database) getSchemaVersion() (uint16, error) {
 				return 0, errors.New("failed to get record version")
 			}
 
-			version, ok := versionAttribute.(uint16)
+			version, ok := versionAttribute.(int64)
 			if !ok {
 				return 0, errors.New("invalid version attribute type")
 			}
 
-			return version, nil
+			return uint16(version), nil
 		},
 	)
 	if err != nil {
@@ -69,29 +70,25 @@ func (d *Database) setSchemaVersion(version uint16) error {
 	return err
 }
 
-func getMigrations(migrationsFS embed.FS) ([]Migration, error) {
-	entries, err := fs.ReadDir(migrationsFS, "migrations")
+func getMigrations(migrationFS embed.FS) ([]Migration, error) {
+	files, err := fs.Glob(migrationFS, "database/migrations/*.cypher")
 	if err != nil {
 		return nil, err
 	}
 
-	migrations := make([]Migration, 0, len(entries))
-	for _, entry := range entries {
-		if entry.IsDir() || filepath.Ext(entry.Name()) != ".cypher" {
-			continue
-		}
-
-		parts := strings.SplitN(entry.Name(), "_", 2)
+	migrations := make([]Migration, 0, len(files))
+	for _, file := range files {
+		parts := strings.SplitN(filepath.Base(file), "_", 2)
 		if len(parts) != 2 {
-			return nil, fmt.Errorf("invalid migration filename: %q", entry.Name())
+			return nil, fmt.Errorf("invalid migration filename: %q", file)
 		}
 
 		version, err := strconv.ParseUint(parts[0], 10, 16)
 		if err != nil {
-			return nil, fmt.Errorf("invalid migration version in %q: %w", entry.Name(), err)
+			return nil, fmt.Errorf("invalid migration version in %q: %w", file, err)
 		}
 
-		query, err := fs.ReadFile(migrationsFS, "migrations/"+entry.Name())
+		query, err := fs.ReadFile(migrationFS, file)
 		if err != nil {
 			return nil, err
 		}
@@ -103,8 +100,8 @@ func getMigrations(migrationsFS embed.FS) ([]Migration, error) {
 		})
 	}
 
-	sort.Slice(migrations, func(i, j int) bool {
-		return migrations[i].Version < migrations[j].Version
+	slices.SortFunc(migrations, func(a, b Migration) int {
+		return cmp.Compare(a.Version, b.Version)
 	})
 
 	return migrations, nil
@@ -141,6 +138,8 @@ func (d *Database) Migrate(migrationFS embed.FS) error {
 			return err
 		}
 		version = migration.Version
+
+		fmt.Printf("Exectued \"%s\" migration\n", migration.Name)
 	}
 
 	return nil

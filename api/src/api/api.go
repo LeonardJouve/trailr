@@ -9,10 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/LeonardJouve/trailr/api/src/database"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
-	"github.com/neo4j/neo4j-go-driver/v6/neo4j"
 )
 
 func healthcheck(c *echo.Context) error {
@@ -20,30 +18,30 @@ func healthcheck(c *echo.Context) error {
 }
 
 func trail(c *echo.Context) error {
-	db, err := database.GetInstance()
-	if err != nil {
-		return err
-	}
+	// db, err := database.GetInstance()
+	// if err != nil {
+	// 	return err
+	// }
 
-	records, err := database.Query[*database.Database](
-		db,
-		`
-        MATCH (origin:Node{id: $id})
-        MATCH path = (origin)-[:EDGE*]-(n:Node)
-        WITH n, path, reduce(distance = 0, r IN relationships(path) | distance + r.length) AS distance
-        WHERE distance <= $distance
-        UNWIND relationships(path) AS edge
-        RETURN DISTINCT n, edge, distance
-        ORDER BY distance
-        `,
-		map[string]any{
-			"id":       "TODO",
-			"distance": "TODO",
-		},
-		func(r *neo4j.Record) (*database.Database, error) {
-			return &database.Database{}, nil
-		},
-	)
+	// records, err := database.Query[*database.Database](
+	// 	db,
+	// 	`
+	//     MATCH (origin:Node{id: $id})
+	//     MATCH path = (origin)-[:EDGE*]-(n:Node)
+	//     WITH n, path, reduce(distance = 0, r IN relationships(path) | distance + r.length) AS distance
+	//     WHERE distance <= $distance
+	//     UNWIND relationships(path) AS edge
+	//     RETURN DISTINCT n, edge, distance
+	//     ORDER BY distance
+	//     `,
+	// 	map[string]any{
+	// 		"id":       "TODO",
+	// 		"distance": "TODO",
+	// 	},
+	// 	func(r *neo4j.Record) (*database.Database, error) {
+	// 		return &database.Database{}, nil
+	// 	},
+	// )
 
 	return nil
 }
