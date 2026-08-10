@@ -20,25 +20,32 @@ func healthcheck(c *echo.Context) error {
 }
 
 func trail(c *echo.Context) error {
-	// ""
-
 	db, err := database.GetInstance()
 	if err != nil {
 		return err
 	}
 
-	records, err := database.Query(
+	records, err := database.Query[*database.Database](
 		db,
-		`MATCH (origin:Node{id: "1"})
+		`
+        MATCH (origin:Node{id: $id})
         MATCH path = (origin)-[:EDGE*]-(n:Node)
         WITH n, path, reduce(distance = 0, r IN relationships(path) | distance + r.length) AS distance
-        WHERE distance <= 5000
+        WHERE distance <= $distance
         UNWIND relationships(path) AS edge
         RETURN DISTINCT n, edge, distance
-        ORDER BY distance`,
-		map[string]any{},
-		func(r *neo4j.Record) {},
+        ORDER BY distance
+        `,
+		map[string]any{
+			"id":       "TODO",
+			"distance": "TODO",
+		},
+		func(r *neo4j.Record) (*database.Database, error) {
+			return &database.Database{}, nil
+		},
 	)
+
+	return nil
 }
 
 func Start(port int) (func(), error) {
@@ -48,6 +55,7 @@ func Start(port int) (func(), error) {
 	e.Use(middleware.Recover())
 
 	e.GET("/healthcheck", healthcheck)
+	e.GET("/trail", trail)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 

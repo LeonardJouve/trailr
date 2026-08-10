@@ -54,18 +54,19 @@ func Query[T any](db *Database, query string, parameters map[string]any, mapper 
 		query,
 		parameters,
 		neo4j.EagerResultTransformer,
-		neo4j.ExecuteQueryWithDatabase(""),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	records := make([]T, len(result.Records))
-	for i, record := range result.Records {
-		records[i], err = mapper(record)
+	records := make([]T, 0, len(result.Records))
+	for _, record := range result.Records {
+		value, err := mapper(record)
 		if err != nil {
 			return nil, err
 		}
+
+		records = append(records, value)
 	}
 
 	fmt.Printf(

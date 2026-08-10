@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"os"
 	"strconv"
 
@@ -8,6 +9,9 @@ import (
 	"github.com/LeonardJouve/trailr/api/src/database"
 	"github.com/LeonardJouve/trailr/api/src/env"
 )
+
+//go:embed database/migrations/*.cypher
+var migrationFS embed.FS
 
 func main() {
 	if os.Getenv("ENVIRONMENT") != "PRODUCTION" {
@@ -23,6 +27,10 @@ func main() {
 		panic(err)
 	}
 	defer db.Close()
+
+	if err := db.Migrate(migrationFS); err != nil {
+		panic(err)
+	}
 
 	port, err := strconv.ParseInt(os.Getenv("API_PORT"), 10, 32)
 	if err != nil {
