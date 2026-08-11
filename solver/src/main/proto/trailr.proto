@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package ch.trailr;
+
+option java_package = "ch.trailr.solver";
+option java_multiple_files = true;
+
+service HelloService {
+  rpc hello (HelloRequest) returns (HelloReply) {}
+}
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloReply {
+  string message = 1;
+}

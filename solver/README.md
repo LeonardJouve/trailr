@@ -1,0 +1,1 @@
+docker run  --rm -v "./src/main/proto:/proto" fullstorydev/grpcurl -import-path /proto -proto trailr.proto -plaintext -d "{\"name\": \"World\"}" host.docker.internal:15001 ch.trailr.HelloService/hello
