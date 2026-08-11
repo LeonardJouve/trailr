@@ -2,7 +2,7 @@ package ch.trailr.solver
 
 import io.grpc.ServerBuilder
 
-fun main(args: Array<String>) {
+fun main() {
     val trailService = TrailService()
 
     val server = ServerBuilder

@@ -1,5 +1,6 @@
 package ch.trailr.solver
 
+import com.google.ortools.Loader
 import com.google.ortools.linearsolver.MPSolver
 import com.google.ortools.linearsolver.MPVariable
 import kotlin.collections.orEmpty
@@ -7,10 +8,16 @@ import kotlin.math.roundToInt
 
 data class FlowVars(
     val forward: MPVariable,
-    val backward: MPVariable
+    val backward: MPVariable,
 )
 
 class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
+    companion object {
+        init {
+            Loader.loadNativeLibraries()
+        }
+    }
+
     private fun makeFlow(solver: MPSolver, graph: Graph, nodeVars: Map<Int, MPVariable>, edgeVars: List<MPVariable>, originId: Int) {
         val nodeCount = graph.nodes.size.toDouble()
         val flowVars = graph.edges.mapIndexed { i, edge ->
@@ -90,19 +97,19 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
         return Pair(nodeVars, edgeVars)
     }
 
-    private fun makeRepeatPenalty(solver: MPSolver, edgeVars: List<MPVariable>): List<MPVariable> {
-        val repeatPenalty = List(edgeVars.size) { i ->
+    private fun makeRepeatPenalties(solver: MPSolver, edgeVars: List<MPVariable>): List<MPVariable> {
+        val repeatPenalties = List(edgeVars.size) { i ->
             solver.makeNumVar(0.0, Double.POSITIVE_INFINITY, "repeat_penalty_$i")
         }
 
         for (i in edgeVars.indices) {
             val constraint = solver.makeConstraint(-1.0, Double.POSITIVE_INFINITY, "repeat_$i")
 
-            constraint.setCoefficient(repeatPenalty[i], 1.0)
+            constraint.setCoefficient(repeatPenalties[i], 1.0)
             constraint.setCoefficient(edgeVars[i], -1.0)
         }
 
-        return repeatPenalty
+        return repeatPenalties
     }
 
     private fun <T> makePenalty(solver: MPSolver, name: String, target: Double, elements: List<Pair<T, MPVariable>>, getter: (element: T) -> Double): Pair<MPVariable, MPVariable> {
@@ -161,12 +168,51 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
         )
     }
 
+    private fun reconstructTour(graph: Graph, edgeVars: List<MPVariable>, originId: Int): Pair<List<String>, List<Int>> {
+        val remaining = graph.edges.indices.associateWith { i ->
+            edgeVars[i].solutionValue().roundToInt()
+        }.toMutableMap()
+
+        val orderedEdges = mutableListOf<String>()
+        val orderedNodes = mutableListOf<Int>()
+
+        var currentNode = originId
+        orderedNodes.add(currentNode)
+
+        while (currentNode != originId || orderedEdges.isEmpty()) {
+
+            val edgeIndex = graph.adjacency[currentNode]
+                .orEmpty()
+                .firstOrNull { remaining[it]!! > 0 }
+                ?: error("Could not continue tour from node $currentNode")
+
+            val edge = graph.edges[edgeIndex]
+
+            val nextNode = when (currentNode) {
+                edge.fromNode -> edge.toNode
+                edge.toNode -> edge.fromNode
+                else -> error("Invalid adjacency")
+            }
+
+            orderedEdges.add(edge.uuid)
+            orderedNodes.add(nextNode)
+
+            remaining[edgeIndex] = remaining[edgeIndex]!! - 1
+
+            currentNode = nextNode
+        }
+
+        check(currentNode == originId)
+        check(remaining.values.all { it == 0 })
+
+        return orderedEdges to orderedNodes
+    }
+
     override suspend fun solveTour(request: SolveTourRequest): SolveTourResponse {
         val graph = buildGraph(request)
 
         val solver = MPSolver.createSolver("SCIP")
         if (solver == null) {
-            println("failed to create SCIP solver")
             return SolveTourResponse
                 .newBuilder()
                 .setFound(false)
@@ -176,8 +222,10 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
         val t1 = System.nanoTime()
 
         val (nodeVars, edgeVars) = makeGraphConstraint(solver, graph, request.originId)
+
         makeFlow(solver, graph, nodeVars, edgeVars, request.originId)
-        val repeatPenalties = makeRepeatPenalty(solver, edgeVars)
+
+        val repeatPenalties = makeRepeatPenalties(solver, edgeVars)
 
         val (lengthTotal, lengthPenalty) = makePenalty(
             solver,
@@ -185,6 +233,7 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
             request.targetLength,
             graph.edges.mapIndexed { i, edge -> edge to edgeVars[i] },
         ) { edge -> edge.length }
+
         val (elevationTotal, elevationPenalty) = makePenalty(
             solver,
             "elevation",
@@ -216,15 +265,27 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
                 .build()
         }
 
-        val selectedEdges = graph.edges.indices.flatMap { i ->
+        println("Objective: ${solver.objective().value()}")
+        println("Length: ${lengthTotal.solutionValue()}")
+        println("Length penalty: ${lengthPenalty.solutionValue()}")
+        println("Elevation: ${elevationTotal.solutionValue()}")
+        println("Elevation penalty: ${elevationPenalty.solutionValue()}")
+        println("Selected edges:")
+        graph.edges.indices.forEach { i ->
             val count = edgeVars[i].solutionValue().roundToInt()
-            List(count) { graph.edges[i].uuid }
+            if (count == 0) return@forEach
+
+            val edge = graph.edges[i]
+            println("${edge.uuid}: ${edge.fromNode} -> ${edge.toNode}, count=$count")
         }
+
+        val (orderedEdges, orderedNodes) = reconstructTour(graph, edgeVars, request.originId)
 
         val builder = SolveTourResponse.newBuilder()
             .setLength(lengthTotal.solutionValue())
             .setElevation(elevationTotal.solutionValue())
-            .addAllEdgeIds(selectedEdges)
+            .addAllEdgeIds(orderedEdges)
+            .addAllNodeIds(orderedNodes)
             .setFound(true)
 
         return builder.build()
