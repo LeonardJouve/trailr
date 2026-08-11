@@ -258,7 +258,7 @@ def main():
     edges_field_mapping = {
         "UUID": "uuid:string",
         "WANDERWEGE": "trail_type:int",
-        "STUFE": "difficulty:int",
+        "STUFE": "floor:int",
         "BEFAHRBARKEIT": "accessibility:int",
         "VERKEHRSBESCHRAENKUNG": "traffic_restriction:int",
         "BELAGSART": "surface_type:int",
