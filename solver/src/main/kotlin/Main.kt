@@ -2,19 +2,12 @@ package ch.trailr.solver
 
 import io.grpc.ServerBuilder
 
-class HelloService : HelloServiceGrpcKt.HelloServiceCoroutineImplBase() {
-    override suspend fun hello(request: HelloRequest): HelloReply {
-        return HelloReply.newBuilder()
-            .setMessage("Hello, ${request.name}")
-            .build()
-    }
-}
+fun main(args: Array<String>) {
+    val trailService = TrailService()
 
-fun helloServer() {
-    val helloService = HelloService()
     val server = ServerBuilder
-        .forPort(15001)
-        .addService(helloService)
+        .forPort(3001)
+        .addService(trailService)
         .build()
 
     Runtime.getRuntime().addShutdownHook(Thread {
@@ -24,8 +17,4 @@ fun helloServer() {
 
     server.start()
     server.awaitTermination()
-}
-
-fun main(args: Array<String>) {
-    helloServer()
 }
