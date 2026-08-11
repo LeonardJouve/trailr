@@ -11,16 +11,17 @@ service TrailSolver {
 
 message SolveTourRequest {
     int32 origin_id = 1;
-    double target_length = 4;
-    int32 target_elevation = 5;
-    repeated Node nodes = 2;
-    repeated Edge edges = 3;
+    double target_length = 2;
+    double target_elevation = 3;
+    repeated Node nodes = 4;
+    repeated Edge edges = 5;
 }
 
 message SolveTourResponse {
-    double length = 3;
-    repeated int32 node_ids = 1;
-    repeated string edge_ids = 2;
+    bool found = 1;
+    double length = 2;
+    double elevation = 3;
+    repeated string edge_ids = 4;
 }
 
 message Coordinate {
