@@ -1,0 +1,7 @@
+target
+src/test
+.idea
+.gitignore
+docker-compose.yaml
+mvnw.cmd
+README.md
