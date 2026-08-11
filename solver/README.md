@@ -1,1 +1,1 @@
-docker run  --rm -v "./src/main/proto:/proto" fullstorydev/grpcurl -import-path /proto -proto trailr.proto -plaintext -d "{\"name\": \"World\"}" host.docker.internal:15001 ch.trailr.HelloService/hello
+docker run  --rm -v "./src/main/proto:/proto" fullstorydev/grpcurl -import-path /proto -proto trailr.proto -plaintext -d "{\"origin_id\":1,\"nodes\":[],\"edges\":[],\"target_length\":10000,\"target_elevation\":500}" host.docker.internal:3001 ch.trailr.TrailSolver/SolveTour

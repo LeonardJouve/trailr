@@ -5,7 +5,7 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
         // TODO: call CP-SAT solver
 
         return SolveTourResponse.newBuilder()
-            .setLength(0.0)
+            .setLength(10.0)
             .build()
     }
 }

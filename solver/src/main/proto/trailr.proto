@@ -6,21 +6,21 @@ option java_package = "ch.trailr.solver";
 option java_multiple_files = true;
 
 service TrailSolver {
-  rpc SolveTour(SolveTourRequest) returns (SolveTourResponse);
+    rpc SolveTour(SolveTourRequest) returns (SolveTourResponse);
 }
 
 message SolveTourRequest {
-  Node origin = 1;
-  double target_length = 4;
-  int32 target_elevation = 5;
-  repeated Node nodes = 2;
-  repeated Edge edges = 3;
+    int32 origin_id = 1;
+    double target_length = 4;
+    int32 target_elevation = 5;
+    repeated Node nodes = 2;
+    repeated Edge edges = 3;
 }
 
 message SolveTourResponse {
-  double length = 3;
-  repeated int32 node_ids = 1;
-  repeated string edge_ids = 2;
+    double length = 3;
+    repeated int32 node_ids = 1;
+    repeated string edge_ids = 2;
 }
 
 message Coordinate {
