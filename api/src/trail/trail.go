@@ -14,7 +14,7 @@ import (
 
 const MAX_INITIAL_RANGE = 1000
 
-func GetClosestNode(x float64, y float64, z float64) (int32, error) {
+func GetClosestNode(x float64, y float64) (int32, error) {
 	db, err := database.GetInstance()
 	if err != nil {
 		return 0, err
@@ -26,19 +26,25 @@ func GetClosestNode(x float64, y float64, z float64) (int32, error) {
         WITH point({
             x: $x,
             y: $y,
-            z: $z,
-            crs: 'cartesian-3d'
+            crs: 'cartesian'
         }) AS origin
+
         MATCH (n:Node)
-        WHERE point.distance(n.location, origin) <= $range
+        WITH n, origin, point({
+            x: n.x,
+            y: n.y,
+            crs: 'cartesian'
+        }) AS nodePoint
+
+        WHERE point.distance(nodePoint, origin) <= $range
+
         RETURN n.id AS id
-        ORDER BY point.distance(n.location, origin)
+        ORDER BY point.distance(nodePoint, origin)
         LIMIT 1;
         `,
 		map[string]any{
 			"x":     x,
 			"y":     y,
-			"z":     z,
 			"range": MAX_INITIAL_RANGE,
 		},
 		func(r *neo4j.Record) (int32, error) {

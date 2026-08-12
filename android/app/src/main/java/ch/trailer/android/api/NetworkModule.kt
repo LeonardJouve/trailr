@@ -6,7 +6,7 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import okhttp3.MediaType.Companion.toMediaType
 
 object NetworkModule {
-    private const val BASE_URL = "http://localhost:3000/"
+    private const val BASE_URL = "http://192.168.1.249:3000/"
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -15,9 +15,7 @@ object NetworkModule {
     private val retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
         .addConverterFactory(
-            json.asConverterFactory(
-                "application/json".toMediaType()
-            )
+            json.asConverterFactory("application/json".toMediaType())
         )
         .build()
 

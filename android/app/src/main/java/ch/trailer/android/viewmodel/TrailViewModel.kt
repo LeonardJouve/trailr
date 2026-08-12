@@ -21,9 +21,19 @@ data class TrailUiState(
 class TrailViewModel(
     private val repository: TrailRepository
 ) : ViewModel() {
-
     var state by mutableStateOf(TrailUiState())
         private set
+
+    fun healthCheck() {
+        viewModelScope.launch {
+            try {
+                val response = repository.health()
+                println("API health: ${response.status}")
+            } catch (e: Exception) {
+                println("API unavailable: ${e.message}")
+            }
+        }
+    }
 
     fun findTrail(
         point: SelectedPoint,

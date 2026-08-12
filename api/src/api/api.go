@@ -11,6 +11,7 @@ import (
 
 	"github.com/LeonardJouve/trailr/api/src/proto"
 	"github.com/LeonardJouve/trailr/api/src/trail"
+	"github.com/LeonardJouve/trailr/api/src/utils"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
@@ -23,11 +24,10 @@ func healthcheck(c *echo.Context) error {
 }
 
 type TrailRequest struct {
-	X         float64 `json:"x"`
-	Y         float64 `json:"y"`
-	Z         float64 `json:"z"`
-	Length    uint    `json:"length" validate:"gt=0,lte=30000"`
-	Elevation uint    `json:"elevation" validate:"gt=0,lte=10000"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Length    uint    `json:"length" validate:"gt=0,lte=25000"`
+	Elevation uint    `json:"elevation" validate:"gt=0,lte=2000"`
 }
 
 func findTrail(c *echo.Context) error {
@@ -41,7 +41,9 @@ func findTrail(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	origin, err := trail.GetClosestNode(request.X, request.Y, request.Z)
+	x, y := utils.WGS84ToLV95(request.Latitude, request.Longitude)
+
+	origin, err := trail.GetClosestNode(x, y)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to find closest node")
 	}
