@@ -1,7 +1,9 @@
 package trail
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/LeonardJouve/trailr/api/src/database"
@@ -76,7 +78,7 @@ func CreateGraph(origin int32, radius uint) (string, error) {
 	_, err = database.Query(
 		db,
 		`
-        MATCH (origin:Node {id: "$origin"})
+        MATCH (origin:Node {id: $origin})
         CALL gds.graph.project.cypher(
             $name,
             '
@@ -104,7 +106,7 @@ func CreateGraph(origin int32, radius uint) (string, error) {
         RETURN graphName;
         `,
 		map[string]any{
-			"origin": origin,
+			"origin": strconv.FormatInt(int64(origin), 10),
 			"name":   name,
 			"radius": radius,
 		},
@@ -146,6 +148,28 @@ type graphRecord struct {
 	Edge *proto.Edge
 }
 
+func parseCoordinates(rawCoordinates string) ([]*proto.Coordinate, error) {
+	var jsonCoordinates [][]float64
+	if err := json.Unmarshal([]byte(rawCoordinates), &jsonCoordinates); err != nil {
+		return []*proto.Coordinate{}, fmt.Errorf("failed to parse coordinates: %w", err)
+	}
+
+	coordinates := make([]*proto.Coordinate, 0, len(jsonCoordinates))
+	for _, coordinate := range jsonCoordinates {
+		if len(coordinate) != 3 {
+			return []*proto.Coordinate{}, fmt.Errorf("invalid coordinate length: %d", len(coordinate))
+		}
+
+		coordinates = append(coordinates, &proto.Coordinate{
+			X: coordinate[0],
+			Y: coordinate[1],
+			Z: coordinate[2],
+		})
+	}
+
+	return coordinates, nil
+}
+
 func GetReachableGraph(origin int32, graph string, radius uint) ([]*proto.Node, []*proto.Edge, error) {
 	db, err := database.GetInstance()
 	if err != nil {
@@ -155,7 +179,7 @@ func GetReachableGraph(origin int32, graph string, radius uint) ([]*proto.Node, 
 	records, err := database.Query(
 		db,
 		`
-        MATCH (origin:Node {id: "$origin"})
+        MATCH (origin:Node {id: $origin})
         CALL gds.allShortestPaths.dijkstra.stream($graph, {
             sourceNode: origin,
             relationshipWeightProperty: 'length'
@@ -181,7 +205,7 @@ func GetReachableGraph(origin int32, graph string, radius uint) ([]*proto.Node, 
                 from_node: e.from_node,
                 to_node: e.to_node,
                 length: e.length,
-                coordinates: e.coordinates
+                coordinates: e.coords
             } AS edge,
             {
                 id: b.id,
@@ -191,7 +215,7 @@ func GetReachableGraph(origin int32, graph string, radius uint) ([]*proto.Node, 
             } AS b;
         `,
 		map[string]any{
-			"origin": origin,
+			"origin": strconv.FormatInt(int64(origin), 10),
 			"graph":  graph,
 			"radius": radius,
 		},
@@ -215,9 +239,39 @@ func GetReachableGraph(origin int32, graph string, radius uint) ([]*proto.Node, 
 			edge := edgeValue.(map[string]any)
 			b := bValue.(map[string]any)
 
+			aId, err := strconv.ParseInt(a["id"].(string), 10, 32)
+			if err != nil {
+				return graphRecord{}, fmt.Errorf("invalid a.id type: %T", a["id"])
+			}
+
+			bId, err := strconv.ParseInt(b["id"].(string), 10, 32)
+			if err != nil {
+				return graphRecord{}, fmt.Errorf("invalid b.id type: %T", b["id"])
+			}
+
+			trailType, ok := edge["trail_type"].(int64)
+			if !ok {
+				return graphRecord{}, fmt.Errorf("invalid trail_type type: %T", edge["trail_type"])
+			}
+
+			surfaceType, ok := edge["surface_type"].(int64)
+			if !ok {
+				return graphRecord{}, fmt.Errorf("invalid surface_type type: %T", edge["surface_type"])
+			}
+
+			rawCoordinates, ok := edge["coordinates"].(string)
+			if !ok {
+				return graphRecord{}, fmt.Errorf("invalid coordinates type: %T", edge["coordinates"])
+			}
+
+			coordinates, err := parseCoordinates(rawCoordinates)
+			if err != nil {
+				return graphRecord{}, err
+			}
+
 			return graphRecord{
 				A: &proto.Node{
-					Id: a["id"].(int32),
+					Id: int32(aId),
 					Coordinate: &proto.Coordinate{
 						X: a["x"].(float64),
 						Y: a["y"].(float64),
@@ -225,7 +279,7 @@ func GetReachableGraph(origin int32, graph string, radius uint) ([]*proto.Node, 
 					},
 				},
 				B: &proto.Node{
-					Id: b["id"].(int32),
+					Id: int32(bId),
 					Coordinate: &proto.Coordinate{
 						X: b["x"].(float64),
 						Y: b["y"].(float64),
@@ -234,11 +288,12 @@ func GetReachableGraph(origin int32, graph string, radius uint) ([]*proto.Node, 
 				},
 				Edge: &proto.Edge{
 					Uuid:        edge["uuid"].(string),
-					TrailType:   proto.TrailType(edge["trail_type"].(int32)),
-					SurfaceType: proto.SurfaceType(edge["surface_type"].(int32)),
-					FromNode:    edge["from_node"].(int32),
-					ToNode:      edge["to_node"].(int32),
+					TrailType:   proto.TrailType(trailType),
+					SurfaceType: proto.SurfaceType(surfaceType),
+					FromNode:    int32(aId),
+					ToNode:      int32(bId),
 					Length:      edge["length"].(float64),
+					Coordinates: coordinates,
 				},
 			}, nil
 		},
