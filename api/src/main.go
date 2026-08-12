@@ -8,6 +8,7 @@ import (
 	"github.com/LeonardJouve/trailr/api/src/api"
 	"github.com/LeonardJouve/trailr/api/src/database"
 	"github.com/LeonardJouve/trailr/api/src/env"
+	"github.com/LeonardJouve/trailr/api/src/proto"
 )
 
 //go:embed database/migrations/*.cypher
@@ -31,6 +32,12 @@ func main() {
 	if err := db.Migrate(migrationFS); err != nil {
 		panic(err)
 	}
+
+	client, err := proto.New(os.Getenv("SOLVER_URI"))
+	if err != nil {
+		panic(err)
+	}
+	defer client.Close()
 
 	port, err := strconv.ParseInt(os.Getenv("API_PORT"), 10, 32)
 	if err != nil {

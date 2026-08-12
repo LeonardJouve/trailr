@@ -2,6 +2,10 @@
 docker compose run --rm neo4j neo4j-admin database import full neo4j --nodes=Node=/var/lib/neo4j/import/wanderwege_nodes.csv --relationships=/var/lib/neo4j/import/wanderwege_edges.csv --overwrite-destination
 ```
 
+```
+protoc -I=../solver/src/main/proto --go_out=src/proto --go_opt=paths=source_relative --go-grpc_out=src/proto --go-grpc_opt=paths=source_relative trailr.proto
+```
+
 // set location point property
 MATCH (n:Node)
 SET n.location = point({

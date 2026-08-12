@@ -2,3 +2,4 @@ tmp
 data
 .env
 neo4j/*
+*.pb.go

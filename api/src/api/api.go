@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/LeonardJouve/trailr/api/src/proto"
 	"github.com/LeonardJouve/trailr/api/src/trail"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v5"
@@ -22,10 +23,11 @@ func healthcheck(c *echo.Context) error {
 }
 
 type TrailRequest struct {
-	X      float64 `json:"x"`
-	Y      float64 `json:"y"`
-	Z      float64 `json:"z"`
-	Length uint    `json:"length" validate:"gt=0,lte=30000"`
+	X         float64 `json:"x"`
+	Y         float64 `json:"y"`
+	Z         float64 `json:"z"`
+	Length    uint    `json:"length" validate:"gt=0,lte=30000"`
+	Elevation uint    `json:"elevation" validate:"gt=0,lte=10000"`
 }
 
 func findTrail(c *echo.Context) error {
@@ -51,12 +53,38 @@ func findTrail(c *echo.Context) error {
 
 	defer trail.DropGraph(graph)
 
-	result, err := trail.GetReachableGraph(origin, graph, request.Length)
+	nodes, edges, err := trail.GetReachableGraph(origin, graph, request.Length)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to find reachable graph")
 	}
 
-	return c.JSON(http.StatusOK, result)
+	client, err := proto.GetInstance()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to get grpc client instance")
+	}
+
+	response, err := client.SolveTour(c.Request().Context(), &proto.SolveTourRequest{
+		OriginId:        origin,
+		TargetLength:    float64(request.Length),
+		TargetElevation: float64(request.Elevation),
+		Nodes:           nodes,
+		Edges:           edges,
+	})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to call solver")
+	}
+
+	if !response.Found {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed solve graph")
+	}
+
+	return c.JSON(http.StatusOK, map[string]any{
+		"found":     response.Found,
+		"length":    response.Length,
+		"elevation": response.Elevation,
+		"nodeIds":   response.NodeIds,
+		"edgeIds":   response.EdgeIds,
+	})
 }
 
 func Start(port int) (func(), error) {

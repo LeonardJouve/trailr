@@ -4,6 +4,7 @@ package ch.trailr;
 
 option java_package = "ch.trailr.solver";
 option java_multiple_files = true;
+option go_package = "github.com/LeonardJouve/trailr/api/src/proto";
 
 service TrailSolver {
     rpc SolveTour(SolveTourRequest) returns (SolveTourResponse);
