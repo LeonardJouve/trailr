@@ -29,7 +29,7 @@ func GetClosestNode(x float64, y float64, z float64) (int32, error) {
         }) AS origin
         MATCH (n:Node)
         WHERE point.distance(n.location, origin) <= $range
-        RETURN n
+        RETURN n.id AS id
         ORDER BY point.distance(n.location, origin)
         LIMIT 1;
         `,

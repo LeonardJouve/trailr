@@ -94,7 +94,7 @@ func Start(port int) (func(), error) {
 	e.Use(middleware.Recover())
 
 	e.GET("/healthcheck", healthcheck)
-	e.GET("/trail", findTrail)
+	e.POST("/trail", findTrail)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 

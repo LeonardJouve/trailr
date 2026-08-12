@@ -357,6 +357,7 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
         val t3 = System.nanoTime()
         println("Solver solved in ${(t3 - t2) / 1_000_000_000.0} s")
 
+        println("Solution status: ${status.name}")
         if (status != MPSolver.ResultStatus.OPTIMAL && status != MPSolver.ResultStatus.FEASIBLE) {
             return SolveTourResponse.newBuilder()
                 .setFound(false)
