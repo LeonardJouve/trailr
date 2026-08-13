@@ -1,9 +1,21 @@
 package ch.trailer.android.components
 
 import android.annotation.SuppressLint
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import ch.trailer.android.SelectedPoint
 import ch.trailer.android.api.GeoJsonFeature
@@ -51,115 +63,156 @@ val style = Style.Builder().fromJson("""
 @Composable
 fun TrailMap(
     modifier: Modifier = Modifier,
-    onPointSelected: (SelectedPoint) -> Unit,
-    selectedPoint: SelectedPoint?,
     trail: GeoJsonFeature?,
+    onOpenList: () -> Unit,
+    onFindTrail: (point: SelectedPoint, length: UInt, elevation: UInt) -> Unit,
 ) {
     val context = LocalContext.current
 
-    AndroidView(
-        modifier = modifier,
-        factory = {
-            MapView(context).apply {
-                getMapAsync { map ->
-                    map.setStyle(style) { style ->
-                        println("SwissTopo style loaded")
+    var selectedPoint by remember {
+        mutableStateOf<SelectedPoint?>(null)
+    }
 
-                        val locationComponent = map.locationComponent
+    Column(modifier = modifier.fillMaxSize()) {
+        Box(
+            modifier = modifier.fillMaxSize()
+        ) {
+            AndroidView(
+                modifier = modifier,
+                factory = {
+                    MapView(context).apply {
+                        getMapAsync { map ->
+                            map.setStyle(style) { style ->
+                                println("SwissTopo style loaded")
 
-                        locationComponent.activateLocationComponent(
-                            LocationComponentActivationOptions
-                                .builder(context, style)
-                                .build()
-                        )
+                                val locationComponent = map.locationComponent
 
-                        locationComponent.isLocationComponentEnabled = true
-                        locationComponent.renderMode = RenderMode.COMPASS
-
-                        map.setMinZoomPreference(8.0)
-                        map.setMaxZoomPreference(20.0)
-                        map.setLatLngBoundsForCameraTarget(
-                            LatLngBounds.Builder()
-                                .include(LatLng(45.50, 5.00))
-                                .include(LatLng(48.00, 11.00))
-                                .build()
-                        )
-
-                        map.cameraPosition = CameraPosition.Builder()
-                            .target(locationComponent.lastKnownLocation?.let {
-                                LatLng(it.latitude, it.longitude)
-                            })
-                            .zoom(15.0)
-                            .build()
-
-                        locationComponent.cameraMode = CameraMode.TRACKING
-
-                        map.addOnMapClickListener { point ->
-                            onPointSelected(SelectedPoint(point.latitude, point.longitude))
-                            map.animateCamera(
-                                CameraUpdateFactory.newCameraPosition(
-                                    CameraPosition.Builder()
-                                        .target(LatLng(point.latitude, point.longitude))
-                                        .zoom(15.0)
+                                locationComponent.activateLocationComponent(
+                                    LocationComponentActivationOptions
+                                        .builder(context, style)
                                         .build()
-                                ),
-                                1000
+                                )
+
+                                locationComponent.isLocationComponentEnabled = true
+                                locationComponent.renderMode = RenderMode.COMPASS
+
+                                map.setMinZoomPreference(8.0)
+                                map.setMaxZoomPreference(20.0)
+                                map.setLatLngBoundsForCameraTarget(
+                                    LatLngBounds.Builder()
+                                        .include(LatLng(45.50, 5.00))
+                                        .include(LatLng(48.00, 11.00))
+                                        .build()
+                                )
+
+                                map.cameraPosition = CameraPosition.Builder()
+                                    .target(locationComponent.lastKnownLocation?.let {
+                                        LatLng(it.latitude, it.longitude)
+                                    })
+                                    .zoom(15.0)
+                                    .build()
+
+                                locationComponent.cameraMode = CameraMode.TRACKING
+
+                                map.addOnMapClickListener { point ->
+                                    selectedPoint = SelectedPoint(point.latitude, point.longitude)
+                                    map.animateCamera(
+                                        CameraUpdateFactory.newCameraPosition(
+                                            CameraPosition.Builder()
+                                                .target(LatLng(point.latitude, point.longitude))
+                                                .zoom(15.0)
+                                                .build()
+                                        ),
+                                        1000
+                                    )
+                                    true
+                                }
+
+                                val source = GeoJsonSource("selected-point")
+                                style.addSource(source)
+
+                                style.addLayer(
+                                    CircleLayer(
+                                        "selected-point-layer",
+                                        "selected-point"
+                                    ).withProperties(
+                                        PropertyFactory.circleRadius(8f),
+                                        PropertyFactory.circleColor("#FF0000"),
+                                        PropertyFactory.circleStrokeColor("#FFFFFF"),
+                                        PropertyFactory.circleStrokeWidth(2f)
+                                    )
+                                )
+
+                                style.addSource(
+                                    GeoJsonSource(
+                                        "trail-source",
+                                        FeatureCollection.fromFeatures(emptyArray())
+                                    )
+                                )
+                                style.addLayer(
+                                    LineLayer("trail-layer", "trail-source").withProperties(
+                                        PropertyFactory.lineWidth(5f),
+                                        PropertyFactory.lineColor("#FF0000"),
+                                        PropertyFactory.lineOpacity(1f)
+                                    )
+                                )
+                            }
+                        }
+                    }
+                },
+                update = { mapView ->
+                    mapView.getMapAsync { map ->
+                        val selectedPointSource = map.style
+                            ?.getSourceAs<GeoJsonSource>("selected-point")
+                            ?: return@getMapAsync
+
+                        if (selectedPoint != null) {
+                            selectedPointSource.setGeoJson(
+                                Feature.fromGeometry(
+                                    Point.fromLngLat(
+                                        selectedPoint!!.longitude,
+                                        selectedPoint!!.latitude
+                                    )
+                                )
                             )
-                            true
+                        } else {
+                            selectedPointSource.setGeoJson(
+                                FeatureCollection.fromFeatures(emptyArray())
+                            )
                         }
 
-                        val source = GeoJsonSource("selected-point")
-                        style.addSource(source)
+                        val trailSource = map.style?.getSourceAs<GeoJsonSource>("trail-source")
+                            ?: return@getMapAsync
 
-                        style.addLayer(
-                            CircleLayer(
-                                "selected-point-layer",
-                                "selected-point"
-                            ).withProperties(
-                                PropertyFactory.circleRadius(8f),
-                                PropertyFactory.circleColor("#FF0000"),
-                                PropertyFactory.circleStrokeColor("#FFFFFF"),
-                                PropertyFactory.circleStrokeWidth(2f)
+                        if (trail != null) {
+                            trailSource.setGeoJson(Json.encodeToString(trail))
+                        } else {
+                            trailSource.setGeoJson(
+                                FeatureCollection.fromFeatures(emptyArray())
                             )
-                        )
-
-                        style.addSource(GeoJsonSource("trail-source", FeatureCollection.fromFeatures(emptyArray())))
-                        style.addLayer(LineLayer("trail-layer", "trail-source").withProperties(
-                            PropertyFactory.lineWidth(5f),
-                            PropertyFactory.lineColor("#FF0000"),
-                            PropertyFactory.lineOpacity(1f)
-                        ))
+                        }
                     }
                 }
-            }
-        },
-        update = { mapView ->
-            mapView.getMapAsync { map ->
-                val selectedPointSource = map.style
-                    ?.getSourceAs<GeoJsonSource>("selected-point")
-                    ?: return@getMapAsync
-
-                if (selectedPoint != null) {
-                    selectedPointSource.setGeoJson(
-                        Feature.fromGeometry(Point.fromLngLat(selectedPoint.longitude,selectedPoint.latitude))
-                    )
-                } else {
-                    selectedPointSource.setGeoJson(
-                        FeatureCollection.fromFeatures(emptyArray())
-                    )
-                }
-
-                val trailSource = map.style?.getSourceAs<GeoJsonSource>("trail-source")
-                    ?: return@getMapAsync
-
-                if (trail != null) {
-                    trailSource.setGeoJson(Json.encodeToString(trail))
-                } else {
-                    trailSource.setGeoJson(
-                        FeatureCollection.fromFeatures(emptyArray())
-                    )
-                }
+            )
+            Button(
+                onClick = onOpenList,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+            ) {
+                Text("Trails")
             }
         }
-    )
+
+        selectedPoint?.let {
+            TrailMenu(
+                onDismiss = {
+                    selectedPoint = null
+                },
+                onFindTrail = { length, elevation ->
+                    onFindTrail(selectedPoint!!, length, elevation)
+                }
+            )
+        }
+    }
 }

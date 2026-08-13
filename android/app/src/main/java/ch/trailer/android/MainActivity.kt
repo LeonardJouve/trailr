@@ -11,15 +11,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
-import ch.trailer.android.api.HealthResponse
 import ch.trailer.android.api.NetworkModule
 import ch.trailer.android.api.TrailRepository
 import ch.trailer.android.components.HomeScreen
 import ch.trailer.android.ui.theme.TrailrTheme
 import ch.trailer.android.viewmodel.TrailViewModel
 import ch.trailer.android.viewmodel.TrailViewModelFactory
-import kotlinx.serialization.builtins.serializer
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,8 +34,10 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun App() {
+    val application = LocalContext.current.applicationContext as TrailrApplication
+
     val repository = remember {
-        TrailRepository(NetworkModule.trailApi)
+        TrailRepository(NetworkModule.trailApi, application.database.trailDao())
     }
 
     val factory = remember {
@@ -63,7 +64,8 @@ fun App() {
                     elevation = elevation
                 )
             },
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(innerPadding),
+            onDeleteTrail = { trail -> viewModel.deleteTrail(trail) },
         )
     }
 }

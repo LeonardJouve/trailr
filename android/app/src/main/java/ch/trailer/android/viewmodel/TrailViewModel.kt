@@ -10,12 +10,14 @@ import ch.trailer.android.SelectedPoint
 import ch.trailer.android.api.TrailRepository
 import ch.trailer.android.api.TrailRequest
 import ch.trailer.android.api.TrailResponse
+import ch.trailer.android.database.TrailEntity
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 data class TrailUiState(
     val isLoading: Boolean = false,
     val trail: TrailResponse? = null,
+    val savedTrails: List<TrailEntity> = emptyList(),
     val error: String? = null
 )
 
@@ -24,6 +26,18 @@ class TrailViewModel(
 ) : ViewModel() {
     var state by mutableStateOf(TrailUiState())
         private set
+
+    init {
+        observeSavedTrails()
+    }
+
+    private fun observeSavedTrails() {
+        viewModelScope.launch {
+            repository.getSavedTrails().collect { trails ->
+                state = state.copy(savedTrails = trails)
+            }
+        }
+    }
 
     fun healthCheck() {
         viewModelScope.launch {
@@ -70,6 +84,41 @@ class TrailViewModel(
                     isLoading = false,
                     error = e.message
                 )
+            }
+        }
+    }
+
+    fun saveTrail(
+        id: String,
+        name: String,
+        trail: TrailResponse
+    ) {
+        viewModelScope.launch {
+            try {
+                val start = trail.geoJSON.geometry.coordinates[0][0]
+                repository.saveTrail(
+                    TrailEntity(
+                        id = id,
+                        name = name,
+                        length = trail.length,
+                        elevation = trail.elevation,
+                        latitude = start[1],
+                        longitude = start[0],
+                        geoJSON = Json.encodeToString(trail.geoJSON)
+                    )
+                )
+            } catch (e: Exception) {
+                state = state.copy(error = e.message)
+            }
+        }
+    }
+
+    fun deleteTrail(trail: TrailEntity) {
+        viewModelScope.launch {
+            try {
+                repository.deleteTrail(trail)
+            } catch (e: Exception) {
+                state = state.copy(error = e.message)
             }
         }
     }

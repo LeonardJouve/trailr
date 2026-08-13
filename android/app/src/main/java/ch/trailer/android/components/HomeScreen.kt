@@ -15,13 +15,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import ch.trailer.android.Screen
 import ch.trailer.android.SelectedPoint
+import ch.trailer.android.database.TrailEntity
 import ch.trailer.android.viewmodel.TrailUiState
 
 @Composable
 fun HomeScreen(
     state: TrailUiState,
     onFindTrail: (point: SelectedPoint, length: UInt, elevation: UInt) -> Unit,
+    onDeleteTrail: (trail: TrailEntity) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var hasLocationPermission by remember {
@@ -64,31 +70,42 @@ fun HomeScreen(
         }
     }
 
-    var selectedPoint by remember {
-        mutableStateOf<SelectedPoint?>(null)
-    }
+    val navController = rememberNavController()
 
-    Column(modifier = modifier.fillMaxSize()) {
-        if (hasLocationPermission) {
-            TrailMap(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .weight(1f),
-                onPointSelected = { point ->
-                    selectedPoint = point
+    NavHost(
+        navController = navController,
+        startDestination = Screen.Trails.route
+    ) {
+        composable(Screen.Trails.route) {
+            TrailList(
+                trails = state.savedTrails,
+                onTrailClick = { trail ->
+                    onSelectTrail(trail)
+                    navController.navigate(Screen.Map.route)
                 },
-                selectedPoint = selectedPoint,
-                trail = state.trail?.geoJSON,
+                onTrailDelete = { trail ->
+                    onDeleteTrail(trail)
+                },
+                onBack = {
+                    navController.popBackStack()
+                }
             )
+        }
 
-            selectedPoint?.let {
-                TrailMenu(
-                    onDismiss = {
-                        selectedPoint = null
+        composable(Screen.Map.route) {
+            if (hasLocationPermission) {
+                TrailMap(
+                    onOpenList = {
+                        navController.navigate(Screen.Trails.route)
                     },
-                    onFindTrail = { length, elevation ->
-                        onFindTrail(selectedPoint!!, length, elevation)
-                    }
+                    onFindTrail = { point, length, elevation ->
+                        onFindTrail(
+                            point,
+                            length,
+                            elevation
+                        )
+                    },
+                    trail = state.trail?.geoJSON,
                 )
             }
         }
