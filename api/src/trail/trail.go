@@ -70,6 +70,10 @@ func GetClosestNode(x float64, y float64) (int32, error) {
 		return 0, err
 	}
 
+	if len(records) == 0 {
+		return 0, fmt.Errorf("failed to find closest node to x=%f y=%f", x, y)
+	}
+
 	return records[0], nil
 }
 

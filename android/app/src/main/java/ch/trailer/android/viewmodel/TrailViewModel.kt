@@ -11,6 +11,7 @@ import ch.trailer.android.api.TrailRepository
 import ch.trailer.android.api.TrailRequest
 import ch.trailer.android.api.TrailResponse
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 
 data class TrailUiState(
     val isLoading: Boolean = false,
@@ -57,11 +58,14 @@ class TrailViewModel(
                     )
                 )
 
+                println(Json.encodeToString(result.geoJSON))
+
                 state = state.copy(
                     isLoading = false,
                     trail = result
                 )
             } catch (e: Exception) {
+                println(e.message)
                 state = state.copy(
                     isLoading = false,
                     error = e.message

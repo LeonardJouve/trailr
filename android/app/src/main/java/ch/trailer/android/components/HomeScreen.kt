@@ -77,7 +77,8 @@ fun HomeScreen(
                 onPointSelected = { point ->
                     selectedPoint = point
                 },
-                selectedPoint = selectedPoint
+                selectedPoint = selectedPoint,
+                trail = state.trail?.geoJSON,
             )
 
             selectedPoint?.let {

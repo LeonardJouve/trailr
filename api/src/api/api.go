@@ -9,9 +9,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/LeonardJouve/trailr/api/src/geo"
 	"github.com/LeonardJouve/trailr/api/src/proto"
 	"github.com/LeonardJouve/trailr/api/src/trail"
-	"github.com/LeonardJouve/trailr/api/src/utils"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
@@ -27,7 +27,7 @@ type TrailRequest struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
 	Length    uint    `json:"length" validate:"gt=0,lte=25000"`
-	Elevation uint    `json:"elevation" validate:"gt=0,lte=2000"`
+	Elevation uint    `json:"elevation" validate:"gte=0,lte=2000"`
 }
 
 func findTrail(c *echo.Context) error {
@@ -41,7 +41,7 @@ func findTrail(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	x, y := utils.WGS84ToLV95(request.Latitude, request.Longitude)
+	x, y := geo.WGS84ToLV95(request.Latitude, request.Longitude)
 
 	origin, err := trail.GetClosestNode(x, y)
 	if err != nil {
@@ -80,13 +80,32 @@ func findTrail(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed solve graph")
 	}
 
+	geoJSON := geo.EdgesToGeoJSON(filterEdges(edges, response.EdgeIds))
+
 	return c.JSON(http.StatusOK, map[string]any{
 		"found":     response.Found,
 		"length":    response.Length,
 		"elevation": response.Elevation,
-		"nodeIds":   response.NodeIds,
-		"edgeIds":   response.EdgeIds,
+		"geoJSON":   geoJSON,
 	})
+}
+
+func filterEdges(edges []*proto.Edge, edgeUUIDs []string) []*proto.Edge {
+	edgeSet := make(map[string]struct{}, len(edgeUUIDs))
+
+	for _, uuid := range edgeUUIDs {
+		edgeSet[uuid] = struct{}{}
+	}
+
+	filtered := []*proto.Edge{}
+
+	for _, edge := range edges {
+		if _, ok := edgeSet[edge.Uuid]; ok {
+			filtered = append(filtered, edge)
+		}
+	}
+
+	return filtered
 }
 
 func Start(port int) (func(), error) {

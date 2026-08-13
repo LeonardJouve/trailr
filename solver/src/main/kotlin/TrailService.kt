@@ -25,7 +25,7 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
         }
 
         val LENGTH_PENALTY_WEIGHT = 1.0
-        val ELEVATION_PENALTY_WEIGHT = 10.0
+        val ELEVATION_PENALTY_WEIGHT = 5.0
         val REPEAT_PENALTY_WEIGHT = 5.0
     }
 
@@ -344,8 +344,8 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
         val objective = solver.objective()
         objective.setCoefficient(lengthPenalty, LENGTH_PENALTY_WEIGHT)
         objective.setCoefficient(elevationPenalty, ELEVATION_PENALTY_WEIGHT)
-        for (repeatPenalty in repeatPenalties) {
-            objective.setCoefficient(repeatPenalty, REPEAT_PENALTY_WEIGHT)
+        for (i in repeatPenalties.indices) {
+            objective.setCoefficient(repeatPenalties[i], REPEAT_PENALTY_WEIGHT * graph.edges[i].length)
         }
         objective.setMinimization()
 
@@ -366,9 +366,10 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
 
         println("Objective: ${solver.objective().value()}")
         println("Length: ${lengthTotal.solutionValue()}")
-        println("Length penalty: ${lengthPenalty.solutionValue()}")
+        println("Length penalty: ${lengthPenalty.solutionValue() * LENGTH_PENALTY_WEIGHT}")
         println("Elevation: ${elevationTotal.solutionValue()}")
-        println("Elevation penalty: ${elevationPenalty.solutionValue()}")
+        println("Elevation penalty: ${elevationPenalty.solutionValue() * ELEVATION_PENALTY_WEIGHT}")
+        println("Repeat penalty: ${repeatPenalties.indices.sumOf { i -> repeatPenalties[i].solutionValue() * REPEAT_PENALTY_WEIGHT * graph.edges[i].length }}")
         println("Selected edges:")
         graph.edges.indices.forEach { i ->
             val edge = graph.edges[i]
