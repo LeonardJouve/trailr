@@ -7,22 +7,24 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import ch.trailer.android.SelectedPoint
+import ch.trailer.android.OfflineMapManager
+import org.maplibre.android.geometry.LatLngBounds
 import ch.trailer.android.api.TrailRepository
 import ch.trailer.android.api.TrailRequest
-import ch.trailer.android.api.TrailResponse
 import ch.trailer.android.database.TrailEntity
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 data class TrailUiState(
     val isLoading: Boolean = false,
-    val trail: TrailResponse? = null,
     val savedTrails: List<TrailEntity> = emptyList(),
+    val selectedTrail: TrailEntity? = null,
     val error: String? = null
 )
 
 class TrailViewModel(
-    private val repository: TrailRepository
+    private val repository: TrailRepository,
+    private val offlineMapManager: OfflineMapManager
 ) : ViewModel() {
     var state by mutableStateOf(TrailUiState())
         private set
@@ -74,9 +76,23 @@ class TrailViewModel(
 
                 println(Json.encodeToString(result.geoJSON))
 
+                val start = result.geoJSON.geometry.coordinates[0][0]
+                val trailId = "${point.latitude}_${point.longitude}_${System.currentTimeMillis()}"
+                val trailEntity = TrailEntity(
+                    id = trailId,
+                    name = "Trail from ${"%.4f".format(java.util.Locale.US, point.latitude)} , ${"%.4f".format(java.util.Locale.US, point.longitude)}",
+                    length = result.length,
+                    elevation = result.elevation,
+                    latitude = start[1],
+                    longitude = start[0],
+                    geoJSON = Json.encodeToString(result.geoJSON)
+                )
+
+                repository.saveTrail(trailEntity)
+
                 state = state.copy(
                     isLoading = false,
-                    trail = result
+                    selectedTrail = trailEntity
                 )
             } catch (e: Exception) {
                 println(e.message)
@@ -84,31 +100,6 @@ class TrailViewModel(
                     isLoading = false,
                     error = e.message
                 )
-            }
-        }
-    }
-
-    fun saveTrail(
-        id: String,
-        name: String,
-        trail: TrailResponse
-    ) {
-        viewModelScope.launch {
-            try {
-                val start = trail.geoJSON.geometry.coordinates[0][0]
-                repository.saveTrail(
-                    TrailEntity(
-                        id = id,
-                        name = name,
-                        length = trail.length,
-                        elevation = trail.elevation,
-                        latitude = start[1],
-                        longitude = start[0],
-                        geoJSON = Json.encodeToString(trail.geoJSON)
-                    )
-                )
-            } catch (e: Exception) {
-                state = state.copy(error = e.message)
             }
         }
     }
@@ -122,16 +113,49 @@ class TrailViewModel(
             }
         }
     }
+
+    fun selectTrail(trail: TrailEntity) {
+        state = state.copy(selectedTrail = trail)
+    }
+
+    fun clearSelectedTrail() {
+        state = state.copy(selectedTrail = null)
+    }
+
+    fun downloadOfflineRegion(bounds: LatLngBounds, minZoom: Double = 10.0, maxZoom: Double = 15.0) {
+        viewModelScope.launch {
+            state = state.copy(isLoading = true, error = null)
+
+            try {
+                offlineMapManager.downloadRegion(
+                    bounds = bounds,
+                    minZoom = minZoom,
+                    maxZoom = maxZoom,
+                    onComplete = {
+                        println("Offline map downloaded")
+                        state = state.copy(isLoading = false)
+                    },
+                    onError = { err ->
+                        println("Offline map error: $err")
+                        state = state.copy(isLoading = false, error = err)
+                    }
+                )
+            } catch (e: Exception) {
+                state = state.copy(isLoading = false, error = e.message)
+            }
+        }
+    }
 }
 
 class TrailViewModelFactory(
-    private val repository: TrailRepository
+    private val repository: TrailRepository,
+    private val offlineMapManager: OfflineMapManager
 ) : ViewModelProvider.Factory {
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(TrailViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return TrailViewModel(repository) as T
+            return TrailViewModel(repository, offlineMapManager) as T
         }
 
         throw IllegalArgumentException("Unknown ViewModel class")

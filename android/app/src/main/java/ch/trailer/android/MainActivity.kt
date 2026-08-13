@@ -40,8 +40,12 @@ fun App() {
         TrailRepository(NetworkModule.trailApi, application.database.trailDao())
     }
 
+    val offlineManager = remember {
+        OfflineMapManager(application)
+    }
+
     val factory = remember {
-        TrailViewModelFactory(repository)
+        TrailViewModelFactory(repository, offlineManager)
     }
 
     val viewModel: TrailViewModel = viewModel(
@@ -66,6 +70,8 @@ fun App() {
             },
             modifier = Modifier.padding(innerPadding),
             onDeleteTrail = { trail -> viewModel.deleteTrail(trail) },
+            onSelectTrail = { trail -> viewModel.selectTrail(trail) },
+            onClearTrail = { viewModel.clearSelectedTrail() },
         )
     }
 }

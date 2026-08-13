@@ -1,11 +1,20 @@
 package ch.trailer.android.components
 
 import android.annotation.SuppressLint
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -14,12 +23,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import ch.trailer.android.SelectedPoint
-import ch.trailer.android.api.GeoJsonFeature
-import kotlinx.serialization.json.Json
+import ch.trailer.android.database.TrailEntity
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -28,7 +39,6 @@ import org.maplibre.android.location.LocationComponentActivationOptions
 import org.maplibre.android.location.modes.CameraMode
 import org.maplibre.android.location.modes.RenderMode
 import org.maplibre.android.maps.MapView
-import org.maplibre.android.maps.Style
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.PropertyFactory
@@ -36,35 +46,13 @@ import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.Point
-
-val style = Style.Builder().fromJson("""
-{
-  "version": 8,
-  "sources": {
-    "swisstopo": {
-      "type": "raster",
-      "tiles": [
-        "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg"
-      ],
-      "tileSize": 256
-    }
-  },
-  "layers": [
-    {
-      "id": "swisstopo",
-      "type": "raster",
-      "source": "swisstopo"
-    }
-  ]
-}
-""".trimIndent())
-
 @SuppressLint("MissingPermission")
 @Composable
 fun TrailMap(
     modifier: Modifier = Modifier,
-    trail: GeoJsonFeature?,
+    selectedTrail: TrailEntity? = null,
     onOpenList: () -> Unit,
+    onClearTrail: () -> Unit,
     onFindTrail: (point: SelectedPoint, length: UInt, elevation: UInt) -> Unit,
 ) {
     val context = LocalContext.current
@@ -75,14 +63,14 @@ fun TrailMap(
 
     Column(modifier = modifier.fillMaxSize()) {
         Box(
-            modifier = modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize().weight(1f)
         ) {
             AndroidView(
-                modifier = modifier,
+                modifier = Modifier.fillMaxSize(),
                 factory = {
                     MapView(context).apply {
                         getMapAsync { map ->
-                            map.setStyle(style) { style ->
+                            map.setStyle("asset://swisstopo.json") { style ->
                                 println("SwissTopo style loaded")
 
                                 val locationComponent = map.locationComponent
@@ -184,8 +172,19 @@ fun TrailMap(
                         val trailSource = map.style?.getSourceAs<GeoJsonSource>("trail-source")
                             ?: return@getMapAsync
 
-                        if (trail != null) {
-                            trailSource.setGeoJson(Json.encodeToString(trail))
+                        if (selectedTrail != null) {
+                            trailSource.setGeoJson(selectedTrail.geoJSON)
+
+                            // Center camera on the selected trail
+                            map.animateCamera(
+                                CameraUpdateFactory.newCameraPosition(
+                                    CameraPosition.Builder()
+                                        .target(LatLng(selectedTrail.latitude, selectedTrail.longitude))
+                                        .zoom(15.0)
+                                        .build()
+                                ),
+                                1000
+                            )
                         } else {
                             trailSource.setGeoJson(
                                 FeatureCollection.fromFeatures(emptyArray())
@@ -194,14 +193,68 @@ fun TrailMap(
                     }
                 }
             )
-            Button(
-                onClick = onOpenList,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)
-            ) {
-                Text("Trails")
+
+            selectedTrail?.let { trail ->
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(16.dp)
+                        .background(
+                            color = Color.Black.copy(alpha = 0.7f),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .padding(16.dp)
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = trail.name,
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Text(
+                            text = "Length: ${(trail.length).toInt()} m",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+
+                        Text(
+                            text = "Elevation: ${trail.elevation.toInt()} m",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Clear trail",
+                        tint = Color.White,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(4.dp)
+                            .size(24.dp)
+                            .clickable { onClearTrail() }
+                    )
+                }
             }
+
+            androidx.compose.material3.FloatingActionButton(
+                onClick = onOpenList,
+                containerColor = Color(0xFF2196F3),
+                contentColor = Color.White,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = 60.dp),
+                shape = CircleShape
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.List,
+                    contentDescription = "My Trails",
+                )
+            }
+
         }
 
         selectedPoint?.let {

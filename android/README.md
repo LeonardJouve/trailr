@@ -1,4 +1,2 @@
-select trail
-store trails
-icons
-download map tiles
+icons (application icon)
+download tiles

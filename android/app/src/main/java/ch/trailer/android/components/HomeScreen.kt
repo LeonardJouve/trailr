@@ -28,6 +28,8 @@ fun HomeScreen(
     state: TrailUiState,
     onFindTrail: (point: SelectedPoint, length: UInt, elevation: UInt) -> Unit,
     onDeleteTrail: (trail: TrailEntity) -> Unit,
+    onSelectTrail: (trail: TrailEntity) -> Unit,
+    onClearTrail: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var hasLocationPermission by remember {
@@ -74,7 +76,7 @@ fun HomeScreen(
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Trails.route
+        startDestination = Screen.Map.route
     ) {
         composable(Screen.Trails.route) {
             TrailList(
@@ -96,7 +98,11 @@ fun HomeScreen(
             if (hasLocationPermission) {
                 TrailMap(
                     onOpenList = {
+                        onClearTrail()
                         navController.navigate(Screen.Trails.route)
+                    },
+                    onClearTrail = {
+                        onClearTrail()
                     },
                     onFindTrail = { point, length, elevation ->
                         onFindTrail(
@@ -105,7 +111,7 @@ fun HomeScreen(
                             elevation
                         )
                     },
-                    trail = state.trail?.geoJSON,
+                    selectedTrail = state.selectedTrail,
                 )
             }
         }
