@@ -8,7 +8,7 @@ import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
 object NetworkModule {
-    private const val BASE_URL = "http://192.168.1.249:3000/"
+    private const val BASE_URL = ch.trailer.android.BuildConfig.API_URL
 
     private val json = Json {
         ignoreUnknownKeys = true
