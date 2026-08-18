@@ -1,2 +1,1 @@
-icons (application icon)
-download tiles
+connect to api
