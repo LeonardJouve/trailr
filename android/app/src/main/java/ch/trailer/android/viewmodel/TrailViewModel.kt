@@ -8,7 +8,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import ch.trailer.android.SelectedPoint
 import ch.trailer.android.OfflineMapManager
-import org.maplibre.android.geometry.LatLngBounds
 import ch.trailer.android.api.TrailRepository
 import ch.trailer.android.api.TrailRequest
 import ch.trailer.android.database.TrailEntity
@@ -94,6 +93,8 @@ class TrailViewModel(
                     isLoading = false,
                     selectedTrail = trailEntity
                 )
+
+                downloadTrailTiles(trailEntity)
             } catch (e: Exception) {
                 println(e.message)
                 state = state.copy(
@@ -107,6 +108,12 @@ class TrailViewModel(
     fun deleteTrail(trail: TrailEntity) {
         viewModelScope.launch {
             try {
+                offlineMapManager.deleteTrailTiles(trail)
+            } catch (e: Exception) {
+                println("Failed to delete offline tiles: ${e.message}")
+            }
+
+            try {
                 repository.deleteTrail(trail)
             } catch (e: Exception) {
                 state = state.copy(error = e.message)
@@ -116,32 +123,30 @@ class TrailViewModel(
 
     fun selectTrail(trail: TrailEntity) {
         state = state.copy(selectedTrail = trail)
+
+        viewModelScope.launch {
+            try {
+                if (!offlineMapManager.hasDownloadedTiles(trail)) {
+                    offlineMapManager.downloadTrailTiles(trail)
+                    println("Offline tiles downloaded for trail ${trail.id}")
+                }
+            } catch (e: Exception) {
+                println("Failed to download offline tiles: ${e.message}")
+            }
+        }
     }
 
     fun clearSelectedTrail() {
         state = state.copy(selectedTrail = null)
     }
 
-    fun downloadOfflineRegion(bounds: LatLngBounds, minZoom: Double = 10.0, maxZoom: Double = 15.0) {
+    private fun downloadTrailTiles(trail: TrailEntity) {
         viewModelScope.launch {
-            state = state.copy(isLoading = true, error = null)
-
             try {
-                offlineMapManager.downloadRegion(
-                    bounds = bounds,
-                    minZoom = minZoom,
-                    maxZoom = maxZoom,
-                    onComplete = {
-                        println("Offline map downloaded")
-                        state = state.copy(isLoading = false)
-                    },
-                    onError = { err ->
-                        println("Offline map error: $err")
-                        state = state.copy(isLoading = false, error = err)
-                    }
-                )
+                offlineMapManager.downloadTrailTiles(trail)
+                println("Offline tiles downloaded for trail ${trail.id}")
             } catch (e: Exception) {
-                state = state.copy(isLoading = false, error = e.message)
+                println("Failed to download offline tiles: ${e.message}")
             }
         }
     }
