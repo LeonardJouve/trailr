@@ -2,6 +2,7 @@ package ch.trailer.android.components
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -21,7 +23,9 @@ import androidx.navigation.compose.rememberNavController
 import ch.trailer.android.Screen
 import ch.trailer.android.SelectedPoint
 import ch.trailer.android.database.TrailEntity
+import ch.trailer.android.util.GpxExporter
 import ch.trailer.android.viewmodel.TrailUiState
+import kotlinx.coroutines.launch
 
 @Composable
 fun HomeScreen(
@@ -32,6 +36,28 @@ fun HomeScreen(
     onClearTrail: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    val downloadTrail: (TrailEntity) -> Unit = { trail ->
+        scope.launch {
+            GpxExporter.export(context, trail)
+                .onSuccess { file ->
+                    Toast.makeText(
+                        context,
+                        "GPX saved to ${file.absolutePath}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+                .onFailure { error ->
+                    Toast.makeText(
+                        context,
+                        "Failed to export GPX: ${error.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+        }
+    }
     var hasLocationPermission by remember {
         mutableStateOf(false)
     }
@@ -44,8 +70,6 @@ fun HomeScreen(
                 permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
                         permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
         }
-
-    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         val fine =
@@ -85,6 +109,9 @@ fun HomeScreen(
                     onSelectTrail(trail)
                     navController.navigate(Screen.Map.route)
                 },
+                onTrailDownload = { trail ->
+                    downloadTrail(trail)
+                },
                 onTrailDelete = { trail ->
                     onDeleteTrail(trail)
                 },
@@ -110,6 +137,9 @@ fun HomeScreen(
                             length,
                             elevation
                         )
+                    },
+                    onDownloadTrail = {
+                        state.selectedTrail?.let { downloadTrail(it) }
                     },
                     selectedTrail = state.selectedTrail,
                 )

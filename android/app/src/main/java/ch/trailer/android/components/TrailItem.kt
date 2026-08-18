@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -21,6 +22,7 @@ import ch.trailer.android.database.TrailEntity
 fun TrailItem(
     trail: TrailEntity,
     onClick: () -> Unit,
+    onDownload: () -> Unit,
     onDelete: () -> Unit
 ) {
     Row(
@@ -44,6 +46,13 @@ fun TrailItem(
 
             Text(
                 text = "${trail.elevation.toInt()} m elevation"
+            )
+        }
+
+        IconButton(onClick = onDownload) {
+            Icon(
+                imageVector = Icons.Default.Download,
+                contentDescription = "Download GPX"
             )
         }
 

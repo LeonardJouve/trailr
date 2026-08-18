@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,6 +54,7 @@ fun TrailMap(
     selectedTrail: TrailEntity? = null,
     onOpenList: () -> Unit,
     onClearTrail: () -> Unit,
+    onDownloadTrail: () -> Unit,
     onFindTrail: (point: SelectedPoint, length: UInt, elevation: UInt) -> Unit,
 ) {
     val context = LocalContext.current
@@ -246,6 +248,17 @@ fun TrailMap(
                             .padding(4.dp)
                             .size(24.dp)
                             .clickable { onClearTrail() }
+                    )
+
+                    Icon(
+                        imageVector = Icons.Default.Download,
+                        contentDescription = "Download GPX",
+                        tint = Color.White,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(4.dp)
+                            .size(24.dp)
+                            .clickable { onDownloadTrail() }
                     )
                 }
             }
