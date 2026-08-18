@@ -1,7 +1,10 @@
 package ch.trailer.android.components
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Environment
+import android.provider.DocumentsContract
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -17,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -58,6 +62,62 @@ fun HomeScreen(
                 }
         }
     }
+
+    val openStorage: () -> Unit = {
+        val downloadsDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+        if (downloadsDir == null) {
+            Toast.makeText(
+                context,
+                "External storage is not available",
+                Toast.LENGTH_LONG
+            ).show()
+        } else {
+            try {
+                downloadsDir.mkdirs()
+
+                val docId = "primary:Android/data/${context.packageName}/files/Download"
+                val docUri = DocumentsContract.buildDocumentUri(
+                    "com.android.externalstorage.documents",
+                    docId
+                )
+                val docIntent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(docUri, "vnd.android.document/directory")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+
+                if (docIntent.resolveActivity(context.packageManager) != null) {
+                    context.startActivity(docIntent)
+                } else {
+                    val uri = FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        downloadsDir
+                    )
+                    val folderIntent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(uri, "resource/folder")
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+
+                    if (folderIntent.resolveActivity(context.packageManager) != null) {
+                        context.startActivity(folderIntent)
+                    } else {
+                        Toast.makeText(
+                            context,
+                            "No file manager found. Files are in ${downloadsDir.absolutePath}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(
+                    context,
+                    "Could not open storage: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
     var hasLocationPermission by remember {
         mutableStateOf(false)
     }
@@ -114,6 +174,9 @@ fun HomeScreen(
                 },
                 onTrailDelete = { trail ->
                     onDeleteTrail(trail)
+                },
+                onOpenStorage = {
+                    openStorage()
                 },
                 onBack = {
                     navController.popBackStack()
