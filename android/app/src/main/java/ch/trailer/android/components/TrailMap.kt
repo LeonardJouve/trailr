@@ -61,6 +61,10 @@ fun TrailMap(
         mutableStateOf<SelectedPoint?>(null)
     }
 
+    var isStyleLoaded by remember {
+        mutableStateOf(false)
+    }
+
     Column(modifier = modifier.fillMaxSize()) {
         Box(
             modifier = Modifier.fillMaxSize().weight(1f)
@@ -144,11 +148,17 @@ fun TrailMap(
                                         PropertyFactory.lineOpacity(1f)
                                     )
                                 )
+
+                                isStyleLoaded = true
                             }
                         }
                     }
                 },
                 update = { mapView ->
+                    if (!isStyleLoaded) {
+                        return@AndroidView
+                    }
+
                     mapView.getMapAsync { map ->
                         val selectedPointSource = map.style
                             ?.getSourceAs<GeoJsonSource>("selected-point")
