@@ -58,13 +58,22 @@ func LV95ToWGS84(easting float64, northing float64) (float64, float64) {
 	return lambda * arcSecondsPerDegree, phi * arcSecondsPerDegree
 }
 
-func EdgesToGeoJSON(edges []*proto.Edge) GeoJSONFeature {
+func EdgesToGeoJSON(edges []*proto.Edge, nodeIDs []int32) GeoJSONFeature {
 	lines := make([][][]float64, 0, len(edges))
 
-	for _, edge := range edges {
+	for edgeIndex, edge := range edges {
 		line := make([][]float64, 0, len(edge.Coordinates))
 
-		for _, coordinate := range edge.Coordinates {
+		reverse := edgeIndex+1 < len(nodeIDs) &&
+			edge.ToNode == nodeIDs[edgeIndex] &&
+			edge.FromNode == nodeIDs[edgeIndex+1]
+
+		for coordinateIndex := range edge.Coordinates {
+			if reverse {
+				coordinateIndex = len(edge.Coordinates) - 1 - coordinateIndex
+			}
+
+			coordinate := edge.Coordinates[coordinateIndex]
 			longitude, latitude := LV95ToWGS84(
 				coordinate.X,
 				coordinate.Y,

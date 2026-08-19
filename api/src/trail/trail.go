@@ -212,8 +212,8 @@ func GetReachableGraph(origin int32, graph string, radius uint) ([]*proto.Node, 
                 uuid: e.uuid,
                 trail_type: e.trail_type,
                 surface_type: e.surface_type,
-                from_node: e.from_node,
-                to_node: e.to_node,
+                from_node: startNode(e).id,
+                to_node: endNode(e).id,
                 length: e.length,
                 coordinates: e.coords
             } AS edge,
@@ -259,6 +259,16 @@ func GetReachableGraph(origin int32, graph string, radius uint) ([]*proto.Node, 
 				return graphRecord{}, fmt.Errorf("invalid b.id type: %T", b["id"])
 			}
 
+			fromNodeId, err := strconv.ParseInt(edge["from_node"].(string), 10, 32)
+			if err != nil {
+				return graphRecord{}, fmt.Errorf("invalid edge.from_node type: %T", edge["from_node"])
+			}
+
+			toNodeId, err := strconv.ParseInt(edge["to_node"].(string), 10, 32)
+			if err != nil {
+				return graphRecord{}, fmt.Errorf("invalid edge.to_node type: %T", edge["to_node"])
+			}
+
 			trailType, ok := edge["trail_type"].(int64)
 			if !ok {
 				return graphRecord{}, fmt.Errorf("invalid trail_type type: %T", edge["trail_type"])
@@ -300,8 +310,8 @@ func GetReachableGraph(origin int32, graph string, radius uint) ([]*proto.Node, 
 					Uuid:        edge["uuid"].(string),
 					TrailType:   proto.TrailType(trailType),
 					SurfaceType: proto.SurfaceType(surfaceType),
-					FromNode:    int32(aId),
-					ToNode:      int32(bId),
+					FromNode:    int32(fromNodeId),
+					ToNode:      int32(toNodeId),
 					Length:      edge["length"].(float64),
 					Coordinates: coordinates,
 				},

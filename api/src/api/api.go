@@ -85,7 +85,7 @@ func findTrail(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed solve graph")
 	}
 
-	geoJSON := geo.EdgesToGeoJSON(filterEdges(edges, response.EdgeIds))
+	geoJSON := geo.EdgesToGeoJSON(filterEdges(edges, response.EdgeIds), response.NodeIds)
 
 	return c.JSON(http.StatusOK, map[string]any{
 		"found":     response.Found,
@@ -96,16 +96,16 @@ func findTrail(c *echo.Context) error {
 }
 
 func filterEdges(edges []*proto.Edge, edgeUUIDs []string) []*proto.Edge {
-	edgeSet := make(map[string]struct{}, len(edgeUUIDs))
+	edgeSet := make(map[string]*proto.Edge, len(edgeUUIDs))
 
-	for _, uuid := range edgeUUIDs {
-		edgeSet[uuid] = struct{}{}
+	for _, edge := range edges {
+		edgeSet[edge.Uuid] = edge
 	}
 
 	filtered := []*proto.Edge{}
 
-	for _, edge := range edges {
-		if _, ok := edgeSet[edge.Uuid]; ok {
+	for _, uuid := range edgeUUIDs {
+		if edge, ok := edgeSet[uuid]; ok {
 			filtered = append(filtered, edge)
 		}
 	}
