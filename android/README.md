@@ -1,1 +1,1 @@
-connect to api
+list many trails

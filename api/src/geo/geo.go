@@ -79,10 +79,11 @@ func EdgesToGeoJSON(edges []*proto.Edge, nodeIDs []int32) GeoJSONFeature {
 				coordinate.Y,
 			)
 
-			line = append(line, []float64{
-				longitude,
-				latitude,
-			})
+		line = append(line, []float64{
+			longitude,
+			latitude,
+			coordinate.Z,
+		})
 		}
 
 		lines = append(lines, line)
