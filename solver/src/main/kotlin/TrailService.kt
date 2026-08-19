@@ -4,7 +4,7 @@ import com.google.ortools.Loader
 import com.google.ortools.linearsolver.MPSolver
 import com.google.ortools.linearsolver.MPVariable
 import kotlin.collections.orEmpty
-import kotlin.math.roundToInt
+import kotlin.math.exp
 
 data class FlowVars(
     val forward: MPVariable,
@@ -191,6 +191,41 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
         return Pair(total, penalty)
     }
 
+    private fun makeExponentialLengthPenalty(solver: MPSolver, lengthPenalty: MPVariable, target: Double, maxPossibleLength: Double, weight: Double) {
+        if (weight == 0.0 || target <= 0.0) return
+
+        val maxDeviation = maxOf(target, maxPossibleLength - target)
+        val segments = 20
+        val width = maxDeviation / segments
+        if (width <= 0.0) return
+
+        val scale = target / 10.0
+        val maxExp = 20.0
+        val objective = solver.objective()
+        val segmentVars = List(segments) { i ->
+            solver.makeNumVar(0.0, 1.0, "length_penalty_segment_$i")
+        }
+
+        val totalConstraint = solver.makeConstraint(0.0, 0.0, "length_penalty_segments_total")
+        totalConstraint.setCoefficient(lengthPenalty, -1.0)
+        segmentVars.forEach { totalConstraint.setCoefficient(it, width) }
+
+        for (i in 0 until segments - 1) {
+            val orderConstraint = solver.makeConstraint(Double.NEGATIVE_INFINITY, 0.0, "length_penalty_segment_order_$i")
+            orderConstraint.setCoefficient(segmentVars[i], -1.0)
+            orderConstraint.setCoefficient(segmentVars[i + 1], 1.0)
+        }
+
+        for (i in segmentVars.indices) {
+            val low = i * width
+            val high = (i + 1) * width
+            val cappedHigh = minOf(high / scale, maxExp)
+            val cappedLow = minOf(low / scale, maxExp)
+            val segmentCost = weight * (exp(cappedHigh) - exp(cappedLow))
+            objective.setCoefficient(segmentVars[i], segmentCost)
+        }
+    }
+
     private fun elevationGain(edge: Edge, reverse: Boolean): Double {
         var elevation = 0.0
         val coordinates = if (reverse) {
@@ -298,12 +333,14 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
     override suspend fun solveTour(request: SolveTourRequest): SolveTourResponse {
         val graph = buildGraph(request)
 
-        val solver = MPSolver.createSolver("SCIP")
-        if (solver == null) {
-            return SolveTourResponse
-                .newBuilder()
-                .setFound(false)
-                .build()
+        val solver = MPSolver.createSolver("SCIP") ?: return SolveTourResponse
+            .newBuilder()
+            .setFound(false)
+            .build()
+
+        solver.setNumThreads(Runtime.getRuntime().availableProcessors().coerceAtLeast(1))
+        if (request.timeLimitSeconds > 0.0) {
+            solver.setTimeLimit((request.timeLimitSeconds * 1000).toLong())
         }
 
         val t1 = System.nanoTime()
@@ -325,6 +362,15 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
                 )
             }
         )
+        val maxPossibleLength = graph.edges.sumOf { it.length } * 2.0
+        makeExponentialLengthPenalty(
+            solver,
+            lengthPenalty,
+            request.targetLength,
+            maxPossibleLength,
+            request.exponentialLengthPenaltyWeight
+        )
+
         val (elevationTotal, elevationPenalty) = makePenalty(
             solver,
             "elevation",
@@ -366,6 +412,11 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
         println("Elevation: ${elevationTotal.solutionValue()}")
         println("Elevation penalty: ${elevationPenalty.solutionValue() * request.elevationPenaltyWeight}")
         println("Repeat penalty: ${repeatPenalties.indices.sumOf { i -> repeatPenalties[i].solutionValue() * request.repeatPenaltyWeight * graph.edges[i].length }}")
+        if (request.exponentialLengthPenaltyWeight != 0.0) {
+            val scale = request.targetLength / 10.0
+            val deviation = lengthPenalty.solutionValue()
+            println("Exponential length penalty: ${request.exponentialLengthPenaltyWeight * (exp(minOf(deviation / scale, 20.0)) - 1.0)}")
+        }
         println("Selected edges:")
         graph.edges.indices.forEach { i ->
             val edge = graph.edges[i]

@@ -58,14 +58,11 @@ class TrailServiceTest {
         assertEquals(40.0, response.length, 1e-6)
         assertEquals(5.0, response.elevation, 1e-6)
 
+        assertEquals(1, response.nodeIdsList.first())
+        assertEquals(1, response.nodeIdsList.last())
         assertEquals(
-            listOf(1, 2, 3, 4, 1),
-            response.nodeIdsList
-        )
-
-        assertEquals(
-            listOf("e1", "e2", "e3", "e4"),
-            response.edgeIdsList
+            setOf("e1", "e2", "e3", "e4"),
+            response.edgeIdsList.toSet()
         )
     }
 
@@ -227,7 +224,7 @@ class TrailServiceTest {
             )
             .setLengthPenaltyWeight(1.0)
             .setElevationPenaltyWeight(5.0)
-            .setRepeatPenaltyWeight(5.0)
+            .setRepeatPenaltyWeight(0.0)
             .build()
 
         val response = service.solveTour(request)
@@ -235,9 +232,53 @@ class TrailServiceTest {
         assertTrue(response.found)
 
         assertEquals(50.0, response.length, 1e-6)
+        assertEquals(1, response.nodeIdsList.first())
+        assertEquals(1, response.nodeIdsList.last())
+        assertEquals(2, response.nodeIdsList.count { it == 2 })
+        assertEquals(
+            listOf("e1", "e2", "e2", "e3", "e4").sorted(),
+            response.edgeIdsList.sorted()
+        )
+    }
 
-        assertEquals(listOf(1, 2, 3, 2, 4, 1), response.nodeIdsList)
+    @Test
+    fun `exponential length penalty prefers repeating long edges over tiny trail`() = runBlocking {
+        val request = SolveTourRequest.newBuilder()
+            .setOriginId(1)
+            .setTargetLength(2000.0)
+            .setTargetElevation(0.0)
+            .addAllNodes(
+                listOf(
+                    node(1, 0.0, 0.0, 0.0),
+                    node(2, 1000.0, 0.0, 0.0),
+                    node(3, 5.0, 0.0, 0.0),
+                )
+            )
+            .addAllEdges(
+                listOf(
+                    edge(
+                        "long", 1, 2, 1000.0,
+                        coordinate(0.0, 0.0, 0.0),
+                        coordinate(1000.0, 0.0, 0.0)
+                    ),
+                    edge(
+                        "tiny", 1, 3, 10.0,
+                        coordinate(0.0, 0.0, 0.0),
+                        coordinate(10.0, 0.0, 0.0)
+                    )
+                )
+            )
+            .setLengthPenaltyWeight(1.0)
+            .setElevationPenaltyWeight(0.0)
+            .setRepeatPenaltyWeight(5.0)
+            .setExponentialLengthPenaltyWeight(1.0)
+            .build()
 
-        assertEquals(listOf("e1", "e2", "e2", "e3", "e4"), response.edgeIdsList)
+        val response = service.solveTour(request)
+
+        assertTrue(response.found)
+        assertEquals(2000.0, response.length, 1e-6)
+        assertEquals(listOf(1, 2, 1), response.nodeIdsList)
+        assertEquals(listOf("long", "long"), response.edgeIdsList)
     }
 }

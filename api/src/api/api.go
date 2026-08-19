@@ -55,7 +55,7 @@ func findTrail(c *echo.Context) error {
 
 	defer trail.DropGraph(graph)
 
-	nodes, edges, err := trail.GetReachableGraph(origin, graph, request.Length)
+	nodes, edges, err := trail.GetReachableGraph(origin, graph, uint(float32(request.Length)*0.65))
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to find reachable graph")
 	}
@@ -66,14 +66,16 @@ func findTrail(c *echo.Context) error {
 	}
 
 	response, err := client.SolveTour(c.Request().Context(), &proto.SolveTourRequest{
-		OriginId:               origin,
-		TargetLength:           float64(request.Length),
-		TargetElevation:        float64(request.Elevation),
-		Nodes:                  nodes,
-		Edges:                  edges,
-		LengthPenaltyWeight:    1.0,
-		ElevationPenaltyWeight: 5.0,
-		RepeatPenaltyWeight:    5.0,
+		OriginId:                       origin,
+		TargetLength:                   float64(request.Length),
+		TargetElevation:                float64(request.Elevation),
+		Nodes:                          nodes,
+		Edges:                          edges,
+		LengthPenaltyWeight:            1.0,
+		ExponentialLengthPenaltyWeight: 20.0,
+		ElevationPenaltyWeight:         4.0,
+		RepeatPenaltyWeight:            2.0,
+		TimeLimitSeconds:               20.0,
 	})
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to call solver")

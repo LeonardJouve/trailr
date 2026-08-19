@@ -19,6 +19,8 @@ message SolveTourRequest {
     double length_penalty_weight = 6;
     double elevation_penalty_weight = 7;
     double repeat_penalty_weight = 8;
+    double exponential_length_penalty_weight = 9;
+    double time_limit_seconds = 10;
 }
 
 message SolveTourResponse {
