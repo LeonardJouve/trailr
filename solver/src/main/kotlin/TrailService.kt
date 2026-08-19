@@ -3,6 +3,8 @@ package ch.trailr.solver
 import com.google.ortools.Loader
 import com.google.ortools.linearsolver.MPSolver
 import com.google.ortools.linearsolver.MPVariable
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.collections.orEmpty
 import kotlin.math.exp
 
@@ -48,6 +50,8 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
             Loader.loadNativeLibraries()
         }
     }
+
+    private val solveMutex = Mutex()
 
     private fun makeFlow(solver: MPSolver, graph: Graph, edgeForwardVars: List<MPVariable>, edgeBackwardVars: List<MPVariable>, nodeVars: Map<Int, MPVariable>, originId: Int) {
         val n = graph.nodes.size.toDouble()
@@ -480,16 +484,15 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
         return Pair(circuitArcs.map { it.uuid }, circuitNodes)
     }
 
-    override suspend fun solveTour(request: SolveTourRequest): SolveTourResponse {
+    override suspend fun solveTour(request: SolveTourRequest): SolveTourResponse = solveMutex.withLock {
         val graph = buildGraph(request)
         val (contractedGraph, activeEdges) = contractGraph(graph, request.originId)
 
-        val solver = MPSolver.createSolver("SCIP") ?: return SolveTourResponse
+        val solver = MPSolver.createSolver("SCIP") ?: return@withLock SolveTourResponse
             .newBuilder()
             .setFound(false)
             .build()
 
-        solver.setNumThreads(Runtime.getRuntime().availableProcessors().coerceAtLeast(1))
         if (request.timeLimitSeconds > 0.0) {
             solver.setTimeLimit((request.timeLimitSeconds * 1000).toLong())
         }
@@ -552,7 +555,7 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
 
         println("Solution status: ${status.name}")
         if (status != MPSolver.ResultStatus.OPTIMAL && status != MPSolver.ResultStatus.FEASIBLE) {
-            return SolveTourResponse.newBuilder()
+            return@withLock SolveTourResponse.newBuilder()
                 .setFound(false)
                 .build()
         }
