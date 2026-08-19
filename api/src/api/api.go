@@ -66,11 +66,14 @@ func findTrail(c *echo.Context) error {
 	}
 
 	response, err := client.SolveTour(c.Request().Context(), &proto.SolveTourRequest{
-		OriginId:        origin,
-		TargetLength:    float64(request.Length),
-		TargetElevation: float64(request.Elevation),
-		Nodes:           nodes,
-		Edges:           edges,
+		OriginId:               origin,
+		TargetLength:           float64(request.Length),
+		TargetElevation:        float64(request.Elevation),
+		Nodes:                  nodes,
+		Edges:                  edges,
+		LengthPenaltyWeight:    1.0,
+		ElevationPenaltyWeight: 5.0,
+		RepeatPenaltyWeight:    5.0,
 	})
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to call solver")

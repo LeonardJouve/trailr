@@ -47,6 +47,9 @@ class TrailServiceTest {
                     )
                 )
             )
+            .setLengthPenaltyWeight(1.0)
+            .setElevationPenaltyWeight(5.0)
+            .setRepeatPenaltyWeight(5.0)
             .build()
 
         val response = service.solveTour(request)
@@ -88,6 +91,9 @@ class TrailServiceTest {
                     coordinate(10.0, 0.0, 0.0)
                 )
             )
+            .setLengthPenaltyWeight(1.0)
+            .setElevationPenaltyWeight(5.0)
+            .setRepeatPenaltyWeight(5.0)
             .build()
 
         val response = service.solveTour(request)
@@ -148,6 +154,9 @@ class TrailServiceTest {
                     )
                 )
             )
+            .setLengthPenaltyWeight(1.0)
+            .setElevationPenaltyWeight(5.0)
+            .setRepeatPenaltyWeight(5.0)
             .build()
 
         val response = service.solveTour(request)
@@ -168,6 +177,9 @@ class TrailServiceTest {
             .setTargetLength(100.0)
             .setTargetElevation(10.0)
             .addNodes(node(1, 0.0, 0.0, 0.0))
+            .setLengthPenaltyWeight(1.0)
+            .setElevationPenaltyWeight(5.0)
+            .setRepeatPenaltyWeight(5.0)
             .build()
 
         val response = service.solveTour(request)
@@ -213,6 +225,9 @@ class TrailServiceTest {
                     )
                 )
             )
+            .setLengthPenaltyWeight(1.0)
+            .setElevationPenaltyWeight(5.0)
+            .setRepeatPenaltyWeight(5.0)
             .build()
 
         val response = service.solveTour(request)

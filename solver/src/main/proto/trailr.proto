@@ -16,6 +16,9 @@ message SolveTourRequest {
     double target_elevation = 3;
     repeated Node nodes = 4;
     repeated Edge edges = 5;
+    double length_penalty_weight = 6;
+    double elevation_penalty_weight = 7;
+    double repeat_penalty_weight = 8;
 }
 
 message SolveTourResponse {

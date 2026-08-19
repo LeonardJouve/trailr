@@ -23,10 +23,6 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
         init {
             Loader.loadNativeLibraries()
         }
-
-        val LENGTH_PENALTY_WEIGHT = 1.0
-        val ELEVATION_PENALTY_WEIGHT = 5.0
-        val REPEAT_PENALTY_WEIGHT = 5.0
     }
 
     private fun makeFlow(solver: MPSolver, graph: Graph, edgeForwardVars: List<MPVariable>, edgeBackwardVars: List<MPVariable>, nodeVars: Map<Int, MPVariable>, originId: Int) {
@@ -342,10 +338,10 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
         )
 
         val objective = solver.objective()
-        objective.setCoefficient(lengthPenalty, LENGTH_PENALTY_WEIGHT)
-        objective.setCoefficient(elevationPenalty, ELEVATION_PENALTY_WEIGHT)
+        objective.setCoefficient(lengthPenalty, request.lengthPenaltyWeight)
+        objective.setCoefficient(elevationPenalty, request.elevationPenaltyWeight)
         for (i in repeatPenalties.indices) {
-            objective.setCoefficient(repeatPenalties[i], REPEAT_PENALTY_WEIGHT * graph.edges[i].length)
+            objective.setCoefficient(repeatPenalties[i], request.repeatPenaltyWeight * graph.edges[i].length)
         }
         objective.setMinimization()
 
@@ -366,10 +362,10 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
 
         println("Objective: ${solver.objective().value()}")
         println("Length: ${lengthTotal.solutionValue()}")
-        println("Length penalty: ${lengthPenalty.solutionValue() * LENGTH_PENALTY_WEIGHT}")
+        println("Length penalty: ${lengthPenalty.solutionValue() * request.lengthPenaltyWeight}")
         println("Elevation: ${elevationTotal.solutionValue()}")
-        println("Elevation penalty: ${elevationPenalty.solutionValue() * ELEVATION_PENALTY_WEIGHT}")
-        println("Repeat penalty: ${repeatPenalties.indices.sumOf { i -> repeatPenalties[i].solutionValue() * REPEAT_PENALTY_WEIGHT * graph.edges[i].length }}")
+        println("Elevation penalty: ${elevationPenalty.solutionValue() * request.elevationPenaltyWeight}")
+        println("Repeat penalty: ${repeatPenalties.indices.sumOf { i -> repeatPenalties[i].solutionValue() * request.repeatPenaltyWeight * graph.edges[i].length }}")
         println("Selected edges:")
         graph.edges.indices.forEach { i ->
             val edge = graph.edges[i]
