@@ -205,6 +205,7 @@ fun HomeScreen(
                         state.selectedTrail?.let { downloadTrail(it) }
                     },
                     selectedTrail = state.selectedTrail,
+                    isLoading = state.isLoading,
                 )
             }
         }

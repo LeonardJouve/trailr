@@ -58,6 +58,7 @@ import org.maplibre.geojson.Point
 fun TrailMap(
     modifier: Modifier = Modifier,
     selectedTrail: TrailEntity? = null,
+    isLoading: Boolean = false,
     onOpenList: () -> Unit,
     onClearTrail: () -> Unit,
     onDownloadTrail: () -> Unit,
@@ -289,84 +290,93 @@ fun TrailMap(
 
         }
 
-        selectedTrail?.let { trail ->
-            val profile = remember(trail.geoJSON) {
-                parseElevationProfile(trail.geoJSON)
-            }
-
-            Card(
+        when {
+            isLoading -> TrailCardSkeleton(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
-                )
-            ) {
-                Column(
+                    .padding(16.dp)
+            )
+
+            selectedTrail != null -> {
+                val trail = selectedTrail
+                val profile = remember(trail.geoJSON) {
+                    parseElevationProfile(trail.geoJSON)
+                }
+
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(16.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+                    )
                 ) {
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = trail.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier
-                                .align(Alignment.CenterStart)
-                                .padding(end = 80.dp)
-                        )
-
-                        Row(
-                            modifier = Modifier.align(Alignment.TopEnd),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Download,
-                                contentDescription = "Download GPX",
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = trail.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
                                 modifier = Modifier
-                                    .size(24.dp)
-                                    .clickable { onDownloadTrail() }
+                                    .align(Alignment.CenterStart)
+                                    .padding(end = 80.dp)
                             )
 
-                            Spacer(modifier = Modifier.size(8.dp))
+                            Row(
+                                modifier = Modifier.align(Alignment.TopEnd),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Download,
+                                    contentDescription = "Download GPX",
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clickable { onDownloadTrail() }
+                                )
 
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Clear trail",
+                                Spacer(modifier = Modifier.size(8.dp))
+
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Clear trail",
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clickable { onClearTrail() }
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "Length: ${trail.length.toInt()} m",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+
+                        Text(
+                            text = "Elevation: ${trail.elevation.toInt()} m",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+
+                        if (profile.size >= 2) {
+                            ElevationGraph(
+                                profile = profile,
+                                onPointSelected = { point ->
+                                    hoveredPoint = point?.let {
+                                        SelectedPoint(it.latitude, it.longitude)
+                                    }
+                                },
                                 modifier = Modifier
-                                    .size(24.dp)
-                                    .clickable { onClearTrail() }
+                                    .fillMaxWidth()
+                                    .height(200.dp)
+                                    .padding(top = 16.dp)
                             )
                         }
-                    }
-
-                    Text(
-                        text = "Length: ${trail.length.toInt()} m",
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-
-                    Text(
-                        text = "Elevation: ${trail.elevation.toInt()} m",
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-
-                    if (profile.size >= 2) {
-                        ElevationGraph(
-                            profile = profile,
-                            onPointSelected = { point ->
-                                hoveredPoint = point?.let {
-                                    SelectedPoint(it.latitude, it.longitude)
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp)
-                                .padding(top = 16.dp)
-                        )
                     }
                 }
             }
@@ -378,7 +388,9 @@ fun TrailMap(
                     selectedPoint = null
                 },
                 onFindTrail = { length, elevation ->
-                    onFindTrail(selectedPoint!!, length, elevation)
+                    val point = selectedPoint!!
+                    selectedPoint = null
+                    onFindTrail(point, length, elevation)
                 }
             )
         }
