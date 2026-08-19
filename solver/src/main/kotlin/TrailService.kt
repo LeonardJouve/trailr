@@ -18,6 +18,30 @@ private data class TourArc(
     val to: Int
 )
 
+private data class Chain(
+    val edgeIds: List<String>,
+    val nodeIds: List<Int>,
+    val coordinates: List<Coordinate>
+)
+
+private data class ContractedEdge(
+    val id: String,
+    val fromNode: Int,
+    val toNode: Int,
+    val length: Double,
+    val forwardChain: Chain,
+    val backwardChain: Chain
+)
+
+private fun Chain.reversed(): Chain = Chain(
+    edgeIds = edgeIds.asReversed(),
+    nodeIds = nodeIds.asReversed(),
+    coordinates = coordinates.asReversed()
+)
+
+private fun ContractedEdge.otherEndpoint(node: Int): Int =
+    if (fromNode == node) toNode else fromNode
+
 class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
     companion object {
         init {
@@ -262,6 +286,132 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
         return Graph(nodes, edges, adjacency)
     }
 
+    private fun contractGraph(graph: Graph, originId: Int): Pair<Graph, List<ContractedEdge>> {
+        var nextId = 0
+        fun newId() = "merged-${nextId++}"
+
+        val activeEdges = mutableListOf<ContractedEdge>()
+        graph.edges.forEach { edge ->
+            val forwardChain = Chain(
+                edgeIds = listOf(edge.uuid),
+                nodeIds = listOf(edge.fromNode, edge.toNode),
+                coordinates = edge.coordinatesList
+            )
+            activeEdges.add(
+                ContractedEdge(
+                    id = edge.uuid,
+                    fromNode = edge.fromNode,
+                    toNode = edge.toNode,
+                    length = edge.length,
+                    forwardChain = forwardChain,
+                    backwardChain = forwardChain.reversed()
+                )
+            )
+        }
+
+        val adjacency = mutableMapOf<Int, MutableList<ContractedEdge>>()
+        graph.nodes.keys.forEach { adjacency[it] = mutableListOf() }
+        activeEdges.forEach { edge ->
+            adjacency.getOrPut(edge.fromNode) { mutableListOf() }.add(edge)
+            adjacency.getOrPut(edge.toNode) { mutableListOf() }.add(edge)
+        }
+
+        val queue = ArrayDeque<Int>()
+        adjacency.entries.forEach { (node, edges) ->
+            if (node != originId && edges.size == 2) queue.add(node)
+        }
+
+        while (queue.isNotEmpty()) {
+            val node = queue.removeFirst()
+            val incident = adjacency[node] ?: continue
+            if (incident.size != 2) continue
+
+            val e1 = incident[0]
+            val e2 = incident[1]
+
+            val a = e1.otherEndpoint(node)
+            val b = e2.otherEndpoint(node)
+            if (a == b) continue
+
+            val chain1 = if (e1.fromNode == a) e1.forwardChain else e1.backwardChain
+            val chain2 = if (e2.fromNode == node) e2.forwardChain else e2.backwardChain
+
+            val newForwardChain = Chain(
+                edgeIds = chain1.edgeIds + chain2.edgeIds,
+                nodeIds = chain1.nodeIds + chain2.nodeIds.drop(1),
+                coordinates = chain1.coordinates + chain2.coordinates.drop(1)
+            )
+
+            val newEdge = ContractedEdge(
+                id = newId(),
+                fromNode = a,
+                toNode = b,
+                length = e1.length + e2.length,
+                forwardChain = newForwardChain,
+                backwardChain = newForwardChain.reversed()
+            )
+
+            adjacency[a]?.remove(e1)
+            adjacency[b]?.remove(e2)
+            adjacency[node]?.clear()
+            activeEdges.remove(e1)
+            activeEdges.remove(e2)
+
+            adjacency.getOrPut(a) { mutableListOf() }.add(newEdge)
+            adjacency.getOrPut(b) { mutableListOf() }.add(newEdge)
+            activeEdges.add(newEdge)
+
+            if (a != originId && adjacency[a]?.size == 2) queue.add(a)
+            if (b != originId && adjacency[b]?.size == 2) queue.add(b)
+        }
+
+        val remainingNodes = graph.nodes.filter { (id, _) ->
+            id == originId || adjacency[id]?.isNotEmpty() == true
+        }
+        val contractedEdges = activeEdges.map { edge ->
+            Edge.newBuilder()
+                .setUuid(edge.id)
+                .setFromNode(edge.fromNode)
+                .setToNode(edge.toNode)
+                .setLength(edge.length)
+                .addAllCoordinates(edge.forwardChain.coordinates)
+                .build()
+        }
+
+        val contractedAdjacency = mutableMapOf<Int, MutableList<Int>>()
+        remainingNodes.keys.forEach { contractedAdjacency[it] = mutableListOf() }
+        contractedEdges.forEachIndexed { index, edge ->
+            contractedAdjacency.getOrPut(edge.fromNode) { mutableListOf() }.add(index)
+            contractedAdjacency.getOrPut(edge.toNode) { mutableListOf() }.add(index)
+        }
+
+        return Pair(Graph(remainingNodes, contractedEdges, contractedAdjacency), activeEdges)
+    }
+
+    private fun expandTour(
+        contractedEdgeIds: List<String>,
+        contractedNodeIds: List<Int>,
+        activeEdges: List<ContractedEdge>
+    ): Pair<List<String>, List<Int>> {
+        val edgeMap = activeEdges.associateBy { it.id }
+        val originalEdges = mutableListOf<String>()
+        val originalNodes = mutableListOf<Int>()
+
+        for (i in contractedEdgeIds.indices) {
+            val edge = edgeMap[contractedEdgeIds[i]] ?: error("Unknown contracted edge ${contractedEdgeIds[i]}")
+            val fromNode = contractedNodeIds[i]
+            val chain = if (edge.fromNode == fromNode) edge.forwardChain else edge.backwardChain
+
+            if (originalNodes.isEmpty()) {
+                originalNodes.add(chain.nodeIds.first())
+            }
+            originalEdges.addAll(chain.edgeIds)
+            originalNodes.addAll(chain.nodeIds.drop(1))
+        }
+
+        return Pair(originalEdges, originalNodes)
+    }
+
     // Hierholzer's algorithm
     private fun reconstructTour(graph: Graph, edgeForwardVars: List<MPVariable>, edgeBackwardVars: List<MPVariable>, originId: Int): Pair<List<String>, List<Int>> {
         val arcs = mutableListOf<TourArc>()
@@ -332,6 +482,7 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
 
     override suspend fun solveTour(request: SolveTourRequest): SolveTourResponse {
         val graph = buildGraph(request)
+        val (contractedGraph, activeEdges) = contractGraph(graph, request.originId)
 
         val solver = MPSolver.createSolver("SCIP") ?: return SolveTourResponse
             .newBuilder()
@@ -345,24 +496,24 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
 
         val t1 = System.nanoTime()
 
-        val (edgeForwardVars, edgeBackwardVars) = makeEdgeVariables(solver, graph)
-        val nodeVars = makeNodeVariables(solver, graph, edgeForwardVars, edgeBackwardVars)
-        makeFlow(solver, graph, edgeForwardVars, edgeBackwardVars, nodeVars, request.originId)
-        makeTourConstraint(solver, graph, edgeForwardVars, edgeBackwardVars)
+        val (edgeForwardVars, edgeBackwardVars) = makeEdgeVariables(solver, contractedGraph)
+        val nodeVars = makeNodeVariables(solver, contractedGraph, edgeForwardVars, edgeBackwardVars)
+        makeFlow(solver, contractedGraph, edgeForwardVars, edgeBackwardVars, nodeVars, request.originId)
+        makeTourConstraint(solver, contractedGraph, edgeForwardVars, edgeBackwardVars)
 
         val repeatPenalties = makeRepeatPenalties(solver, edgeForwardVars, edgeBackwardVars)
         val (lengthTotal, lengthPenalty) = makePenalty(
             solver,
             "length",
             request.targetLength,
-            graph.edges.flatMapIndexed { i, edge ->
+            contractedGraph.edges.flatMapIndexed { i, edge ->
                 listOf(
                     Pair(edge.length, edgeForwardVars[i]),
                     Pair(edge.length, edgeBackwardVars[i]),
                 )
             }
         )
-        val maxPossibleLength = graph.edges.sumOf { it.length } * 2.0
+        val maxPossibleLength = contractedGraph.edges.sumOf { it.length } * 2.0
         makeExponentialLengthPenalty(
             solver,
             lengthPenalty,
@@ -375,7 +526,7 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
             solver,
             "elevation",
             request.targetElevation,
-            graph.edges.flatMapIndexed { i, edge ->
+            contractedGraph.edges.flatMapIndexed { i, edge ->
                 listOf(
                     Pair(elevationGain(edge, false), edgeForwardVars[i]),
                     Pair(elevationGain(edge, true), edgeBackwardVars[i]),
@@ -387,7 +538,7 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
         objective.setCoefficient(lengthPenalty, request.lengthPenaltyWeight)
         objective.setCoefficient(elevationPenalty, request.elevationPenaltyWeight)
         for (i in repeatPenalties.indices) {
-            objective.setCoefficient(repeatPenalties[i], request.repeatPenaltyWeight * graph.edges[i].length)
+            objective.setCoefficient(repeatPenalties[i], request.repeatPenaltyWeight * contractedGraph.edges[i].length)
         }
         objective.setMinimization()
 
@@ -411,15 +562,15 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
         println("Length penalty: ${lengthPenalty.solutionValue() * request.lengthPenaltyWeight}")
         println("Elevation: ${elevationTotal.solutionValue()}")
         println("Elevation penalty: ${elevationPenalty.solutionValue() * request.elevationPenaltyWeight}")
-        println("Repeat penalty: ${repeatPenalties.indices.sumOf { i -> repeatPenalties[i].solutionValue() * request.repeatPenaltyWeight * graph.edges[i].length }}")
+        println("Repeat penalty: ${repeatPenalties.indices.sumOf { i -> repeatPenalties[i].solutionValue() * request.repeatPenaltyWeight * contractedGraph.edges[i].length }}")
         if (request.exponentialLengthPenaltyWeight != 0.0) {
             val scale = request.targetLength / 10.0
             val deviation = lengthPenalty.solutionValue()
             println("Exponential length penalty: ${request.exponentialLengthPenaltyWeight * (exp(minOf(deviation / scale, 20.0)) - 1.0)}")
         }
-        println("Selected edges:")
-        graph.edges.indices.forEach { i ->
-            val edge = graph.edges[i]
+        println("Selected contracted edges:")
+        contractedGraph.edges.indices.forEach { i ->
+            val edge = contractedGraph.edges[i]
             if (edgeForwardVars[i].solutionValue() > 0.5) {
                 println("${edge.uuid}: ${edge.fromNode} -> ${edge.toNode}")
             }
@@ -428,7 +579,8 @@ class TrailService : TrailSolverGrpcKt.TrailSolverCoroutineImplBase() {
             }
         }
 
-        val (orderedEdges, orderedNodes) = reconstructTour(graph, edgeForwardVars, edgeBackwardVars, request.originId)
+        val (contractedEdgeIds, contractedNodeIds) = reconstructTour(contractedGraph, edgeForwardVars, edgeBackwardVars, request.originId)
+        val (orderedEdges, orderedNodes) = expandTour(contractedEdgeIds, contractedNodeIds, activeEdges)
 
         val builder = SolveTourResponse.newBuilder()
             .setLength(lengthTotal.solutionValue())
