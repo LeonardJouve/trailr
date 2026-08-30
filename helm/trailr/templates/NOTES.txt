@@ -1,0 +1,10 @@
+Trailr is available over HTTP at:
+  http://{{ .Values.ingress.host }}
+
+Before starting Trailr, ensure the Secret {{ .Values.database.existingSecret }} exists.
+Its {{ .Values.database.usernameKey }} value must be exactly neo4j. For an existing
+Neo4j volume, its {{ .Values.database.passwordKey }} value must match the credentials
+already stored in the database; NEO4J_AUTH does not reset an existing database.
+
+A new empty PVC initializes an empty Neo4j database. Pre-existing or separately
+imported data is optional, and this chart performs no CSV import.

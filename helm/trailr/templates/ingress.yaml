@@ -1,0 +1,20 @@
+{{- $apiName := include "trailr.componentFullname" (dict "context" . "component" "api") -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $apiName }}
+  labels:
+    {{- include "trailr.labels" . | nindent 4 }}
+spec:
+  ingressClassName: {{ required "ingress.className is required" .Values.ingress.className | quote }}
+  rules:
+    - host: {{ required "ingress.host is required" .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $apiName }}
+                port:
+                  number: 3000
