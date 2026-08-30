@@ -37,11 +37,21 @@ android {
     val apiUrl = secrets.getProperty("api.url")
         ?: error("api.url must be set in app/secrets.properties")
 
+    val releaseSigningConfig = System.getenv("ANDROID_KEYSTORE_PATH")?.let { keystorePath ->
+        signingConfigs.create("release") {
+            storeFile = file(keystorePath)
+            storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+            keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+        }
+    }
+
     buildTypes {
         debug {
             buildConfigField("String", "API_URL", "\"$apiUrl\"")
         }
         release {
+            signingConfig = releaseSigningConfig
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

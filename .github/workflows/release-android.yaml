@@ -1,0 +1,55 @@
+name: Release Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag, for example v1.0.0
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: android
+
+    env:
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Set up Java
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - name: Configure build
+        env:
+          API_URL: ${{ secrets.API_URL }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          printf 'api.url=%s\n' "$API_URL" > app/secrets.properties
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/trailr-release.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/trailr-release.jks" >> "$GITHUB_ENV"
+
+      - name: Build signed APK
+        run: ./gradlew assembleRelease
+
+      - name: Create GitHub release
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk trailr.apk
+          gh release create "$TAG" trailr.apk --target "$GITHUB_SHA" --generate-notes --title "$TAG"
