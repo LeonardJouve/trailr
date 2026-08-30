@@ -1,80 +1,86 @@
-{{- $apiName := include "trailr.componentFullname" (dict "context" . "component" "api") -}}
-{{- $solverName := include "trailr.componentFullname" (dict "context" . "component" "solver") -}}
-{{- $neo4jName := include "trailr.componentFullname" (dict "context" . "component" "neo4j" "maxLength" 61) -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ $apiName }}
+  name: {{ .Release.Name }}-api
   labels:
-    {{- include "trailr.labels" . | nindent 4 }}
+    app: api
+    release: {{ .Release.Name }}
 spec:
-  replicas: 1
   selector:
     matchLabels:
-      {{- include "trailr.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: api
+      app: api
+      release: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        {{- include "trailr.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/component: api
+        app: api
+        release: {{ .Release.Name }}
     spec:
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       containers:
         - name: api
-          image: {{ printf "%s:%s" (required "api.image.repository is required" .Values.api.image.repository) (required "api.image.tag is required" .Values.api.image.tag) | quote }}
-          imagePullPolicy: {{ .Values.api.image.pullPolicy | quote }}
+          image: {{ .Values.apiImage }}
           ports:
-            - name: http
-              containerPort: 3000
-              protocol: TCP
+            - containerPort: 3000
           env:
             - name: ENVIRONMENT
               value: PRODUCTION
             - name: API_PORT
               value: "3000"
             - name: DATABASE_URI
-              value: "bolt://{{ $neo4jName }}:7687"
+              value: "bolt://{{ .Release.Name }}-neo4j:7687"
             - name: SOLVER_URI
-              value: "{{ $solverName }}:3001"
+              value: "{{ .Release.Name }}-solver:3001"
             - name: DATABASE_USER
               valueFrom:
                 secretKeyRef:
-                  name: {{ required "database.existingSecret is required" .Values.database.existingSecret | quote }}
-                  key: {{ required "database.usernameKey is required" .Values.database.usernameKey | quote }}
+                  name: {{ .Release.Name }}-neo4j-auth
+                  key: username
             - name: DATABASE_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ required "database.existingSecret is required" .Values.database.existingSecret | quote }}
-                  key: {{ required "database.passwordKey is required" .Values.database.passwordKey | quote }}
+                  name: {{ .Release.Name }}-neo4j-auth
+                  key: password
           startupProbe:
             tcpSocket:
-              port: http
+              port: 3000
             failureThreshold: 30
             periodSeconds: 2
           readinessProbe:
             tcpSocket:
-              port: http
+              port: 3000
             periodSeconds: 10
-          resources:
-            {{- toYaml .Values.api.resources | nindent 12 }}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ $apiName }}
+  name: {{ .Release.Name }}-api
   labels:
-    {{- include "trailr.labels" . | nindent 4 }}
+    app: api
+    release: {{ .Release.Name }}
 spec:
-  type: ClusterIP
   ports:
-    - name: http
-      port: 3000
-      targetPort: http
-      protocol: TCP
+    - port: 3000
   selector:
-    {{- include "trailr.selectorLabels" . | nindent 4 }}
-    app.kubernetes.io/component: api
+    app: api
+    release: {{ .Release.Name }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-api
+  labels:
+    app: api
+    release: {{ .Release.Name }}
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: {{ .Values.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-api
+                port:
+                  number: 3000

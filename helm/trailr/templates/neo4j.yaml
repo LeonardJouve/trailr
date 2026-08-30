@@ -1,77 +1,65 @@
-{{- $neo4jName := include "trailr.componentFullname" (dict "context" . "component" "neo4j" "maxLength" 61) -}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ $neo4jName }}
+  name: {{ .Release.Name }}-neo4j
   labels:
-    {{- include "trailr.labels" . | nindent 4 }}
+    app: neo4j
+    release: {{ .Release.Name }}
 spec:
   clusterIP: None
   ports:
-    - name: bolt
-      port: 7687
-      targetPort: bolt
-      protocol: TCP
+    - port: 7687
   selector:
-    {{- include "trailr.selectorLabels" . | nindent 4 }}
-    app.kubernetes.io/component: neo4j
+    app: neo4j
+    release: {{ .Release.Name }}
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ $neo4jName }}
+  name: {{ .Release.Name }}-neo4j
   labels:
-    {{- include "trailr.labels" . | nindent 4 }}
+    app: neo4j
+    release: {{ .Release.Name }}
 spec:
-  serviceName: {{ $neo4jName }}
-  replicas: 1
+  serviceName: {{ .Release.Name }}-neo4j
   selector:
     matchLabels:
-      {{- include "trailr.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: neo4j
+      app: neo4j
+      release: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        {{- include "trailr.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/component: neo4j
+        app: neo4j
+        release: {{ .Release.Name }}
     spec:
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       containers:
         - name: neo4j
-          image: {{ printf "%s:%s" (required "neo4j.image.repository is required" .Values.neo4j.image.repository) (required "neo4j.image.tag is required" .Values.neo4j.image.tag) | quote }}
-          imagePullPolicy: {{ .Values.neo4j.image.pullPolicy | quote }}
+          image: {{ .Values.neo4jImage }}
           ports:
-            - name: bolt
-              containerPort: 7687
-              protocol: TCP
+            - containerPort: 7687
           env:
             - name: DATABASE_USER
               valueFrom:
                 secretKeyRef:
-                  name: {{ required "database.existingSecret is required" .Values.database.existingSecret | quote }}
-                  key: {{ required "database.usernameKey is required" .Values.database.usernameKey | quote }}
+                  name: {{ .Release.Name }}-neo4j-auth
+                  key: username
             - name: DATABASE_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ required "database.existingSecret is required" .Values.database.existingSecret | quote }}
-                  key: {{ required "database.passwordKey is required" .Values.database.passwordKey | quote }}
+                  name: {{ .Release.Name }}-neo4j-auth
+                  key: password
             - name: NEO4J_AUTH
               value: "$(DATABASE_USER)/$(DATABASE_PASSWORD)"
             - name: NEO4J_PLUGINS
               value: '["graph-data-science"]'
           startupProbe:
             tcpSocket:
-              port: bolt
+              port: 7687
             failureThreshold: 60
             periodSeconds: 5
           readinessProbe:
             tcpSocket:
-              port: bolt
-          resources:
-            {{- toYaml .Values.neo4j.resources | nindent 12 }}
+              port: 7687
           volumeMounts:
             - name: data
               mountPath: /data
@@ -81,9 +69,6 @@ spec:
       spec:
         accessModes:
           - ReadWriteOnce
-        {{- with .Values.neo4j.storage.storageClass }}
-        storageClassName: {{ . }}
-        {{- end }}
         resources:
           requests:
-            storage: {{ .Values.neo4j.storage.size | quote }}
+            storage: {{ .Values.storage }}

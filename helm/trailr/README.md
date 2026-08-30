@@ -1,35 +1,28 @@
 # Trailr Helm chart
 
-## Prerequisites
+Requires Helm 3, Kubernetes with Traefik, and the published Trailr images.
 
-- Helm 3
-- K3s with Traefik
-- Published Trailr images in GHCR
-- An existing Kubernetes Secret containing `username` and `password` keys
+## Install
 
-## Neo4j credentials and data
+Create the Neo4j Secret before installing. Its name is the release name followed
+by `-neo4j-auth`; the username must be `neo4j`.
 
-The chart reads Neo4j credentials from `database.existingSecret`; it does not create
-the Secret and cannot validate its contents at render time. The value stored under
-`database.usernameKey` must be exactly `neo4j`, because the official Neo4j image
-expects `NEO4J_AUTH=neo4j/<password>`.
+```powershell
+$release = "trailr"
+kubectl create secret generic "${release}-neo4j-auth" --from-literal=username=neo4j --from-literal=password=change-me
+helm upgrade --install $release helm/trailr
+```
 
-For a volume containing an existing database, the Secret password must match the
-credentials already stored in that database. `NEO4J_AUTH` initializes credentials
-for a new database but does not reset credentials in an existing database.
+Override settings with `--set`, for example:
 
-A new empty PVC initializes an empty Neo4j database. Pre-existing or separately
-imported data is optional, and this chart performs no CSV import.
+```powershell
+helm upgrade --install trailr helm/trailr --set host=trailr.example.com --set storage=20Gi
+```
 
-## Neo4j storage upgrades
+For an existing Neo4j volume, the Secret password must match the database. Changing
+`storage` does not resize an existing PVC; resize that PVC directly.
 
-`neo4j.storage.size` and `neo4j.storage.storageClass` are creation-time PVC settings
-rendered in the StatefulSet's `volumeClaimTemplates`. Changing either value during a
-Helm upgrade does not resize or migrate an existing PVC and may fail because the
-StatefulSet template is not updatable. Resize an existing PVC directly, following
-the capabilities and procedure of its storage class.
-
-## Render validation
+## Validate
 
 ```powershell
 helm lint helm/trailr

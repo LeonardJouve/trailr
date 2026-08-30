@@ -1,34 +1,5 @@
-imagePullSecrets: []
-
-api:
-  image:
-    repository: ghcr.io/leonardjouve/trailr-api
-    tag: latest
-    pullPolicy: IfNotPresent
-  resources: {}
-
-solver:
-  image:
-    repository: ghcr.io/leonardjouve/trailr-solver
-    tag: latest
-    pullPolicy: IfNotPresent
-  resources: {}
-
-neo4j:
-  image:
-    repository: neo4j
-    tag: 2026.06.0
-    pullPolicy: IfNotPresent
-  resources: {}
-  storage:
-    size: 10Gi
-    storageClass: ""
-
-database:
-  existingSecret: trailr-neo4j-auth
-  usernameKey: username
-  passwordKey: password
-
-ingress:
-  className: traefik
-  host: trailr.local
+apiImage: ghcr.io/leonardjouve/trailr-api:latest
+solverImage: ghcr.io/leonardjouve/trailr-solver:latest
+neo4jImage: neo4j:2026.06.0
+storage: 10Gi
+host: trailr.local
