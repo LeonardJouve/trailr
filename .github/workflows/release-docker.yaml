@@ -1,0 +1,44 @@
+name: Release Docker images
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Image tag, for example v1.0.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - image: api
+            context: .
+            dockerfile: api/Dockerfile
+          - image: solver
+            context: solver
+            dockerfile: solver/Dockerfile
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Log in to GHCR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+
+      - name: Build and push image
+        env:
+          IMAGE_NAME: ${{ matrix.image }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/trailr-$IMAGE_NAME"
+          docker build --file "${{ matrix.dockerfile }}" --tag "$image:$TAG" --tag "$image:latest" "${{ matrix.context }}"
+          docker push "$image:$TAG"
+          docker push "$image:latest"
