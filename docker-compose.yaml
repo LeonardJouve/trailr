@@ -1,0 +1,49 @@
+services:
+  neo4j:
+    container_name: trailr-neo4j
+    image: neo4j:2026.06.0
+    networks:
+      - trailr
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    environment:
+      NEO4J_PLUGINS: '["graph-data-science"]'
+      NEO4J_AUTH: ${DATABASE_USER}/${DATABASE_PASSWORD}
+    volumes:
+      - ./api/neo4j/data:/data
+      - ./api/neo4j/logs:/logs
+      - ./api/neo4j/plugins:/plugins
+      - ./api/neo4j/import:/var/lib/neo4j/import
+  solver:
+    container_name: trailr-solver
+    build:
+      context: ./solver
+      dockerfile: Dockerfile
+    networks:
+      - trailr
+  api:
+    container_name: trailr-api
+    build:
+      dockerfile: api/Dockerfile
+    ports:
+      - "${API_PORT}:3000"
+    networks:
+      - trailr
+    environment:
+      ENVIRONMENT: PRODUCTION
+      DATABASE_URI: ${DATABASE_URI}
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      API_PORT: 3000
+      SOLVER_URI: ${SOLVER_URI}
+    depends_on:
+      neo4j:
+        condition: service_healthy
+
+networks:
+  trailr:
+    name: trailr

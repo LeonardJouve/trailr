@@ -1,6 +1,0 @@
-services:
-  solver:
-    container_name: solver
-    build: .
-    ports:
-      - "3001:3001"
