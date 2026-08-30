@@ -20,6 +20,7 @@ services:
       - ./api/neo4j/import:/var/lib/neo4j/import
   solver:
     container_name: trailr-solver
+    image: ghcr.io/leonardjouve/trailr-solver
     build:
       context: ./solver
       dockerfile: Dockerfile
@@ -27,6 +28,7 @@ services:
       - trailr
   api:
     container_name: trailr-api
+    image: ghcr.io/leonardjouve/trailr-api
     build:
       dockerfile: api/Dockerfile
     ports:
