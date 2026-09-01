@@ -41,12 +41,12 @@ spec:
             - name: DATABASE_USER
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Release.Name }}-neo4j-auth
+                  name: neo4j-auth
                   key: username
             - name: DATABASE_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Release.Name }}-neo4j-auth
+                  name: neo4j-auth
                   key: password
             - name: NEO4J_AUTH
               value: "$(DATABASE_USER)/$(DATABASE_PASSWORD)"
