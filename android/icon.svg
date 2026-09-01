@@ -21,32 +21,24 @@
   <!-- Topographic contour curves across the entire icon (inside and outside the trail) -->
   <!-- Outer contours: smooth stretched trail shapes that fill the icon without overlapping -->
   <path d="M 508 877 C 314.2 839.75 213 697 245.2 494.75 C 267 326 490 576 697 351 C 840 216 917 481 751.2 724.75 C 675 879 613.2 897.25 508 877" 
-        fill="none" stroke="#FFFFFF" stroke-width="6" opacity="0.13" stroke-linecap="round" stroke-linejoin="round"/>
+        fill="none" stroke="#FFFFFF" stroke-width="10" opacity="0.13" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 509 954 C 271.2 911 112 748 175 487 C 227 242 472 550 714 282 C 839 134 1029 417 819 782 C 683 975 635.2 981 508 954" 
-        fill="none" stroke="#FFFFFF" stroke-width="5" opacity="0.11" stroke-linecap="round" stroke-linejoin="round"/>
+        fill="none" stroke="#FFFFFF" stroke-width="10" opacity="0.11" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 512 1039 C 219.6 996.5 29 772 103 483 C 167 146 436 521 717 206 C 961 -55 1083 439 865.6 826.5 C 747 1046 661.6 1081.5 512 1039" 
-        fill="none" stroke="#FFFFFF" stroke-width="5" opacity="0.10" stroke-linecap="round" stroke-linejoin="round"/>
+        fill="none" stroke="#FFFFFF" stroke-width="10" opacity="0.10" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 512 1147.5 C 159.4 1096.25 -62 788.75 26 460 C 85 67 399 484 701 157 C 976 -100 1185 371 938.4 891.25 C 788 1159 692.4 1198.75 512 1147.5" 
-        fill="none" stroke="#FFFFFF" stroke-width="4" opacity="0.09" stroke-linecap="round" stroke-linejoin="round"/>
+        fill="none" stroke="#FFFFFF" stroke-width="10" opacity="0.09" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 511 1254 C 64 1190 -290 777 -118 429 C 115 12 230 410 695 102 C 1011 -233 1269 375 1023 939 C 884 1194 739 1253 511 1254" 
-        fill="none" stroke="#FFFFFF" stroke-width="4" opacity="0.09" stroke-linecap="round" stroke-linejoin="round"/>
+        fill="none" stroke="#FFFFFF" stroke-width="10" opacity="0.09" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 511 1254 C 64 1190 -431 760 -158 331 C 106 -65 184 354 726 -4 C 1103 -329 1269 375 1185 950 C 884 1194 739 1253 511 1254" 
-        fill="none" stroke="#FFFFFF" stroke-width="4" opacity="0.09" stroke-linecap="round" stroke-linejoin="round"/>
+        fill="none" stroke="#FFFFFF" stroke-width="10" opacity="0.09" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M 511 1254 C 64 1190 -600 905 -270 263 C 65 -250 170 277 656 -117 C 1087 -424 1522 190 1185 950 C 884 1194 739 1253 511 1254" 
-        fill="none" stroke="#FFFFFF" stroke-width="4" opacity="0.09" stroke-linecap="round" stroke-linejoin="round"/>
+        fill="none" stroke="#FFFFFF" stroke-width="10" opacity="0.09" stroke-linecap="round" stroke-linejoin="round"/>
   <!-- Inner contours -->
-  <path d="M 512 698
-           C 383 683, 302 593, 338 503
-           C 383 398, 503 548, 608 428
-           C 698 323, 722 548, 668 623
-           C 608 698, 578 713, 512 698" 
-        fill="none" stroke="#FFFFFF" stroke-width="8" opacity="0.14" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 512 574
-           C 469 569, 442 539, 454 509
-           C 469 474, 509 524, 544 484
-           C 574 449, 582 524, 564 549
-           C 544 574, 534 579, 512 574" 
-        fill="none" stroke="#FFFFFF" stroke-width="6" opacity="0.10" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 512 698 C 383 683, 302 593, 338 503 C 383 398, 503 548, 608 428 C 698 323, 722 548, 668 623 C 608 698, 578 713, 512 698" 
+        fill="none" stroke="#FFFFFF" stroke-width="10" opacity="0.14" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 512 574 C 469 569, 442 539, 454 509 C 469 474, 509 524, 544 484 C 574 449, 582 524, 564 549 C 544 574, 534 579, 512 574" 
+        fill="none" stroke="#FFFFFF" stroke-width="10" opacity="0.10" stroke-linecap="round" stroke-linejoin="round"/>
 
   <!-- Centered winding loop trail -->
   <path d="M 512 760
