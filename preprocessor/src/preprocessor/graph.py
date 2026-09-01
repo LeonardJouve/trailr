@@ -270,7 +270,6 @@ def main():
     edge_attributes = [
         "uuid:string",
         "trail_type:int",
-        "difficulty:int",
         "accessibility:int",
         "traffic_restriction:int",
         "surface_type:int",
