@@ -1,12 +1,9 @@
 name: Release Docker images
 
 on:
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: Image tag, for example v1.0.0
-        required: true
-        type: string
+  push:
+    tags:
+      - "v[0-9]+.[0-9]*"
 
 permissions:
   contents: read
@@ -36,7 +33,7 @@ jobs:
       - name: Build and push image
         env:
           IMAGE_NAME: ${{ matrix.image }}
-          TAG: ${{ inputs.tag }}
+          TAG: ${{ github.ref_name }}
         run: |
           image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/trailr-$IMAGE_NAME"
           docker build --file "${{ matrix.dockerfile }}" --tag "$image:$TAG" --tag "$image:latest" "${{ matrix.context }}"

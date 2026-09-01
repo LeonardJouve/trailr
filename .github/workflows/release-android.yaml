@@ -1,12 +1,9 @@
 name: Release Android APK
 
 on:
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: Release tag, for example v1.0.0
-        required: true
-        type: string
+  push:
+    tags:
+      - "v[0-9]+.[0-9]*"
 
 permissions:
   contents: write
@@ -49,9 +46,11 @@ jobs:
 
       - name: Upload APK to GitHub release
         env:
-          TAG: ${{ inputs.tag }}
+          TAG: ${{ github.ref_name }}
         run: |
           cp app/build/outputs/apk/release/app-release.apk trailr.apk
-          gh release view "$TAG" >/dev/null 2>&1 || \
-            gh release create "$TAG" --target "$GITHUB_SHA" --generate-notes --title "$TAG"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --target "$GITHUB_SHA" --generate-notes --title "$TAG" || \
+              gh release view "$TAG" >/dev/null
+          fi
           gh release upload "$TAG" trailr.apk --clobber
