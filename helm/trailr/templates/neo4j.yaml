@@ -32,6 +32,79 @@ spec:
         app: neo4j
         release: {{ .Release.Name }}
     spec:
+      {{- if .Values.neo4jBootstrap.enabled }}
+      initContainers:
+        - name: download-import
+          image: alpine:3.22
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              if [ -f /data/.trailr-bootstrap-complete ]; then
+                echo "Neo4j bootstrap already completed"
+                exit 0
+              fi
+              apk add --no-cache unzip
+              wget -O /import/trails.zip "$IMPORT_URL"
+              if [ -n "$IMPORT_SHA256" ]; then
+                checksum="${IMPORT_SHA256#sha256:}"
+                echo "$checksum  /import/trails.zip" | sha256sum -c -
+              fi
+              unzip -oq /import/trails.zip \
+                output/wanderwege_nodes.csv \
+                output/wanderwege_edges.csv \
+                -d /import
+              test -s /import/output/wanderwege_nodes.csv
+              test -s /import/output/wanderwege_edges.csv
+          env:
+            - name: IMPORT_URL
+              value: {{ .Values.neo4jBootstrap.url | quote }}
+            - name: IMPORT_SHA256
+              value: {{ .Values.neo4jBootstrap.sha256 | quote }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: import
+              mountPath: /import
+        - name: import-database
+          image: {{ .Values.neo4jImage }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              complete=/data/.trailr-bootstrap-complete
+              in_progress=/data/.trailr-bootstrap-in-progress
+              database=/data/databases/neo4j
+
+              if [ -f "$complete" ]; then
+                echo "Neo4j bootstrap already completed"
+                exit 0
+              fi
+              if [ -d "$database" ] && [ ! -f "$in_progress" ]; then
+                echo "Refusing to overwrite an existing Neo4j database" >&2
+                exit 1
+              fi
+
+              touch "$in_progress"
+              neo4j-admin database import full neo4j \
+                --nodes=Node=/import/output/wanderwege_nodes.csv \
+                --relationships=/import/output/wanderwege_edges.csv \
+                --max-off-heap-memory={{ .Values.neo4jBootstrap.maxOffHeapMemory }} \
+                --overwrite-destination
+              printf '%s\n' "$IMPORT_URL" > "$complete"
+              rm -f "$in_progress"
+          env:
+            - name: IMPORT_URL
+              value: {{ .Values.neo4jBootstrap.url | quote }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: import
+              mountPath: /import
+              readOnly: true
+      {{- end }}
       containers:
         - name: neo4j
           image: {{ .Values.neo4jImage }}
@@ -63,6 +136,11 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+      {{- if .Values.neo4jBootstrap.enabled }}
+      volumes:
+        - name: import
+          emptyDir: {}
+      {{- end }}
   volumeClaimTemplates:
     - metadata:
         name: data

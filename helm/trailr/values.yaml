@@ -2,4 +2,10 @@ apiImage: ghcr.io/leonardjouve/trailr-api:latest
 solverImage: ghcr.io/leonardjouve/trailr-solver:latest
 neo4jImage: neo4j:2026.06.0
 storage: 10Gi
-host: trailr.local
+host: trail.famillejouve.ch
+
+neo4jBootstrap:
+  enabled: false
+  url: https://github.com/LeonardJouve/trailr/releases/latest/download/trails.zip
+  sha256: ""
+  maxOffHeapMemory: 1G

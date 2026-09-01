@@ -21,3 +21,31 @@ Install the helm chart
 ```powershell
 helm install trailr -n trailr -f helm/trailr/values.yaml helm/trailr
 ```
+
+## Bootstrap Neo4j
+
+The preprocessing workflow publishes `trails.zip` on each GitHub release. To initialize a fresh Neo4j volume from the latest release, enable the bootstrap init containers:
+
+```powershell
+helm install trailr -n trailr -f helm/trailr/values.yaml --set neo4jBootstrap.enabled=true helm/trailr
+```
+
+The chart downloads `https://github.com/LeonardJouve/trailr/releases/latest/download/trails.zip`, extracts the node and relationship CSV files, and runs `neo4j-admin database import full` before Neo4j starts. It records successful completion on the Neo4j data volume, so replacement pods do not repeat the import.
+
+For reproducible deployments, override `neo4jBootstrap.url` with a versioned release URL and set `neo4jBootstrap.sha256` to the release asset digest. Both GitHub's `sha256:<digest>` format and a bare hexadecimal digest are accepted. Digest verification is disabled by default because the contents of the latest release URL change. The importer limits Neo4j's off-heap memory to `neo4jBootstrap.maxOffHeapMemory`, which defaults to `1G`.
+
+Bootstrap refuses to overwrite an existing database. When replacing an existing disposable database, first stop Neo4j and delete its PVC:
+
+```powershell
+kubectl scale statefulset trailr-neo4j -n trailr --replicas=0
+kubectl delete pvc data-trailr-neo4j-0 -n trailr
+helm upgrade trailr -n trailr -f helm/trailr/values.yaml --set neo4jBootstrap.enabled=true helm/trailr
+kubectl scale statefulset trailr-neo4j -n trailr --replicas=1
+```
+
+Deleting the PVC permanently deletes the current Neo4j database. To inspect bootstrap failures, use:
+
+```powershell
+kubectl logs -n trailr trailr-neo4j-0 -c download-import
+kubectl logs -n trailr trailr-neo4j-0 -c import-database
+```
