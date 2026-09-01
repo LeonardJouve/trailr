@@ -1,6 +1,10 @@
 docker compose up
 
+docker compose down
+
 docker compose run --rm neo4j neo4j-admin database import full neo4j --nodes=Node=/var/lib/neo4j/import/wanderwege_nodes.csv --relationships=/var/lib/neo4j/import/wanderwege_edges.csv --overwrite-destination
+
+docker compose up -d
 
 [Helm chart documentation](helm/trailr/README.md)
 
@@ -10,8 +14,7 @@ The `Release Android APK` GitHub Actions workflow builds a signed APK and
 publishes it to a GitHub Release. It runs manually from **Actions** and asks
 for a release tag such as `v1.0.0`.
 
-Generate a signing keystore locally. No Google or Play Store account is
-required:
+Generate a signing keystore locally:
 
 ```sh
 keytool -genkeypair -v -keystore trailr-release.jks -alias trailr -keyalg RSA -keysize 2048 -validity 10000
