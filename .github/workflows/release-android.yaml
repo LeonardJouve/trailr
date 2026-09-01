@@ -47,9 +47,11 @@ jobs:
       - name: Build signed APK
         run: ./gradlew assembleRelease
 
-      - name: Create GitHub release
+      - name: Upload APK to GitHub release
         env:
           TAG: ${{ inputs.tag }}
         run: |
           cp app/build/outputs/apk/release/app-release.apk trailr.apk
-          gh release create "$TAG" trailr.apk --target "$GITHUB_SHA" --generate-notes --title "$TAG"
+          gh release view "$TAG" >/dev/null 2>&1 || \
+            gh release create "$TAG" --target "$GITHUB_SHA" --generate-notes --title "$TAG"
+          gh release upload "$TAG" trailr.apk --clobber
