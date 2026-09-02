@@ -1,6 +1,6 @@
 # Trail Graph Preprocessor
 
-Preprocess SwissTopo hiking trail data into a graph representation.
+Preprocess 3D line data from a GeoDatabase into a graph representation.
 
 The tool:
 - reads a GeoDatabase (`.gdb`) layer
@@ -34,12 +34,33 @@ sample <input_gdb> <output_gdb> <layer> <minx> <miny> <maxx> <maxy>
 
 ## Generate graph
 
-Run the graph preprocessing:
-```
-uv run graph ./data/SWISSTLM3D_WANDERWEGE.gdb ./data TLM_STRASSE
-````
+The graph command takes one JSON configuration path:
 
-Arguments:
+```bash
+uv run graph <config.json>
 ```
-graph <input_gdb> <output_folder> <layer>
+
+Relative `dataset` and `output_folder` paths are resolved from the directory containing the configuration file. The configured layer must contain only 3D `LineString` or `MultiLineString` geometry. The required `type` is used as the Neo4j node label, relationship type, and import ID group.
+
+For SWISSTLM3D, this configuration preserves the existing exported fields:
+
+```json
+{
+  "dataset": "data/SWISSTLM3D_WANDERWEGE.gdb",
+  "layer": "TLM_STRASSE",
+  "type": "trail",
+  "output_folder": "data",
+  "fields": {
+    "UUID": "uuid:string",
+    "WANDERWEGE": "trail_type:int",
+    "BEFAHRBARKEIT": "accessibility:int",
+    "VERKEHRSBESCHRAENKUNG": "traffic_restriction:int",
+    "BELAGSART": "surface_type:int",
+    "KUNSTBAUTE": "structure_type:int"
+  }
+}
 ```
+
+Each run writes four files to `output_folder`, named from the dataset stem:
+`<dataset>_nodes.gdb`, `<dataset>_nodes.csv`, `<dataset>_edges.gdb`, and
+`<dataset>_edges.csv`.

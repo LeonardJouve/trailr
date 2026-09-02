@@ -1,0 +1,11 @@
+{
+  "dataset": "veloland.gdb",
+  "layer": "VeloWeg",
+  "type": "bike",
+  "output_folder": ".",
+  "fields": {
+    "LVWeg_ID": "uuid:string",
+    "BelagTLM": "surface_type:string",
+    "ObjektArt": "object_type:string"
+  }
+}
