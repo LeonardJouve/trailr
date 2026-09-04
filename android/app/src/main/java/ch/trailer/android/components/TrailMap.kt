@@ -42,6 +42,7 @@ import ch.trailer.android.SelectedPoint
 import ch.trailer.android.api.TourType
 import ch.trailer.android.database.TrailEntity
 import ch.trailer.android.domain.MapLayers
+import ch.trailer.android.domain.MapStyle
 import ch.trailer.android.domain.parseElevationProfile
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -122,7 +123,7 @@ fun TrailMap(
                     MapView(context).apply {
                         mapViewRef = this
                         getMapAsync { map ->
-                            map.setStyle("asset://swisstopo.json") { style ->
+                            map.setStyle(MapStyle.load(context)) { style ->
                                 println("SwissTopo style loaded")
 
                                 val locationComponent = map.locationComponent
