@@ -1,19 +1,46 @@
 {
   "version": 8,
   "sources": {
-    "swisstopo": {
+    "satellite": {
       "type": "raster",
       "tiles": [
-        "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg"
+        "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg"
+      ],
+      "tileSize": 256
+    },
+    "swisstlm3d-wanderwege": {
+      "type": "raster",
+      "tiles": [
+        "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swisstlm3d-wanderwege/default/current/3857/{z}/{x}/{y}.png"
+      ],
+      "tileSize": 256
+    },
+    "veloland": {
+      "type": "raster",
+      "tiles": [
+        "https://wmts.geo.admin.ch/1.0.0/ch.astra.veloland/default/current/3857/{z}/{x}/{y}.png"
       ],
       "tileSize": 256
     }
   },
   "layers": [
     {
-      "id": "swisstopo",
+      "id": "satellite",
       "type": "raster",
-      "source": "swisstopo"
+      "source": "satellite"
+    },
+    {
+      "id": "swisstlm3d-wanderwege",
+      "type": "raster",
+      "source": "swisstlm3d-wanderwege"
+    },
+    {
+      "id": "veloland",
+      "type": "raster",
+      "source": "veloland",
+      "layout": {
+        "visibility": "none"
+      }
     }
   ]
 }

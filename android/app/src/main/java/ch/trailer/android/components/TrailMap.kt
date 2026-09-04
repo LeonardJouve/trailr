@@ -21,6 +21,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,6 +41,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import ch.trailer.android.SelectedPoint
 import ch.trailer.android.api.TourType
 import ch.trailer.android.database.TrailEntity
+import ch.trailer.android.domain.MapLayers
 import ch.trailer.android.domain.parseElevationProfile
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -49,6 +53,7 @@ import org.maplibre.android.location.modes.RenderMode
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
@@ -81,6 +86,10 @@ fun TrailMap(
 
     var mapViewRef by remember {
         mutableStateOf<MapView?>(null)
+    }
+
+    var trailLayer by remember {
+        mutableStateOf(TourType.HIKING)
     }
 
     LaunchedEffect(selectedTrail?.id) {
@@ -212,6 +221,16 @@ fun TrailMap(
                     }
 
                     mapView.getMapAsync { map ->
+                        val style = map.style ?: return@getMapAsync
+
+                        TourType.entries.forEach { type ->
+                            style.getLayer(MapLayers.overlayLayerId(type))?.setProperties(
+                                PropertyFactory.visibility(
+                                    if (type == trailLayer) Property.VISIBLE else Property.NONE
+                                )
+                            )
+                        }
+
                         val selectedPointSource = map.style
                             ?.getSourceAs<GeoJsonSource>("selected-point")
                             ?: return@getMapAsync
@@ -273,6 +292,24 @@ fun TrailMap(
                     }
                 }
             )
+
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(16.dp)
+            ) {
+                TourType.entries.forEachIndexed { index, type ->
+                    SegmentedButton(
+                        selected = trailLayer == type,
+                        onClick = { trailLayer = type },
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = index,
+                            count = TourType.entries.size
+                        ),
+                        label = { Text(type.label) }
+                    )
+                }
+            }
 
             androidx.compose.material3.FloatingActionButton(
                 onClick = onOpenList,
