@@ -64,3 +64,18 @@ For SWISSTLM3D, this configuration preserves the existing exported fields:
 Each run writes four files to `output_folder`, named from the dataset stem:
 `<dataset>_nodes.gdb`, `<dataset>_nodes.csv`, `<dataset>_edges.gdb`, and
 `<dataset>_edges.csv`.
+
+## Export GeoJSON for tiles
+
+Export a GDB layer as geometry-only WGS84 GeoJSON, the input for vector tile
+generation (see the `Tiles` workflow):
+
+```bash
+uv run tiles <input_gdb> <layer> <output.geojson>
+```
+
+Example:
+
+```bash
+uv run tiles data/SWISSTLM3D_WANDERWEGE.gdb TLM_STRASSE output/wanderwege.geojson
+```
