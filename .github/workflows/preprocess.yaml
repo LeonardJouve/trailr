@@ -43,14 +43,13 @@ jobs:
       - name: Extract GDB
         run: |
           bsdtar -xf data/wanderwege.gdb.zip -C data/
-          mv data/*.gdb data/SWISSTLM3D_WANDERWEGE.gdb
-
+          mv data/*.gdb data/wanderwege.gdb
       - name: Run preprocessor
         run: |
           uv run graph data/swiss3d.json
           mkdir -p output
           for suffix in nodes.csv nodes.gdb edges.csv edges.gdb; do
-            mv "data/SWISSTLM3D_WANDERWEGE_${suffix}" "output/wanderwege_${suffix}"
+            mv "data/wanderwege_${suffix}" "output/wanderwege_${suffix}"
           done
 
       - name: Download veloland dataset
