@@ -61,9 +61,10 @@ fun App() {
     ) { innerPadding ->
         HomeScreen(
             state = viewModel.state,
-            onFindTrail = { point, length, elevation ->
-                viewModel.findTrail(
+            onFindTrail = { point, type, length, elevation ->
+                viewModel.findTour(
                     point = point,
+                    type = type,
                     length = length,
                     elevation = elevation
                 )

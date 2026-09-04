@@ -10,6 +10,7 @@ import ch.trailer.android.SelectedPoint
 import ch.trailer.android.OfflineMapManager
 import ch.trailer.android.api.TrailRepository
 import ch.trailer.android.api.TrailRequest
+import ch.trailer.android.api.TourType
 import ch.trailer.android.database.TrailEntity
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -51,8 +52,9 @@ class TrailViewModel(
         }
     }
 
-    fun findTrail(
+    fun findTour(
         point: SelectedPoint,
+        type: TourType,
         length: UInt,
         elevation: UInt
     ) {
@@ -64,7 +66,8 @@ class TrailViewModel(
 
 
             try {
-                val result = repository.findTrail(
+                val result = repository.findTour(
+                    type,
                     TrailRequest(
                         latitude = point.latitude,
                         longitude = point.longitude,
@@ -79,7 +82,7 @@ class TrailViewModel(
                 val trailId = "${point.latitude}_${point.longitude}_${System.currentTimeMillis()}"
                 val trailEntity = TrailEntity(
                     id = trailId,
-                    name = "Trail from ${"%.4f".format(java.util.Locale.US, point.latitude)} , ${"%.4f".format(java.util.Locale.US, point.longitude)}",
+                    name = "${type.label} from ${"%.4f".format(java.util.Locale.US, point.latitude)} , ${"%.4f".format(java.util.Locale.US, point.longitude)}",
                     length = result.length,
                     elevation = result.elevation,
                     latitude = start[1],

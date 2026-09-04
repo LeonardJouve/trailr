@@ -26,6 +26,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import ch.trailer.android.Screen
 import ch.trailer.android.SelectedPoint
+import ch.trailer.android.api.TourType
 import ch.trailer.android.database.TrailEntity
 import ch.trailer.android.util.GpxExporter
 import ch.trailer.android.viewmodel.TrailUiState
@@ -34,7 +35,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     state: TrailUiState,
-    onFindTrail: (point: SelectedPoint, length: UInt, elevation: UInt) -> Unit,
+    onFindTrail: (point: SelectedPoint, type: TourType, length: UInt, elevation: UInt) -> Unit,
     onDeleteTrail: (trail: TrailEntity) -> Unit,
     onSelectTrail: (trail: TrailEntity) -> Unit,
     onClearTrail: () -> Unit,
@@ -194,9 +195,10 @@ fun HomeScreen(
                     onClearTrail = {
                         onClearTrail()
                     },
-                    onFindTrail = { point, length, elevation ->
+                    onFindTrail = { point, type, length, elevation ->
                         onFindTrail(
                             point,
+                            type,
                             length,
                             elevation
                         )

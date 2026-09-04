@@ -9,8 +9,11 @@ class TrailRepository(private val api: TrailApi, private val dao: TrailDao) {
         return api.health()
     }
 
-    suspend fun findTrail(request: TrailRequest): TrailResponse {
-        return api.findTrail(request)
+    suspend fun findTour(type: TourType, request: TrailRequest): TrailResponse {
+        return when (type) {
+            TourType.HIKING -> api.findHikingTour(request)
+            TourType.BIKE -> api.findBikeTour(request)
+        }
     }
 
     suspend fun saveTrail(trail: TrailEntity) {

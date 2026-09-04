@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import ch.trailer.android.SelectedPoint
+import ch.trailer.android.api.TourType
 import ch.trailer.android.database.TrailEntity
 import ch.trailer.android.domain.parseElevationProfile
 import org.maplibre.android.camera.CameraPosition
@@ -62,7 +63,7 @@ fun TrailMap(
     onOpenList: () -> Unit,
     onClearTrail: () -> Unit,
     onDownloadTrail: () -> Unit,
-    onFindTrail: (point: SelectedPoint, length: UInt, elevation: UInt) -> Unit,
+    onFindTrail: (point: SelectedPoint, type: TourType, length: UInt, elevation: UInt) -> Unit,
 ) {
     val context = LocalContext.current
 
@@ -387,10 +388,10 @@ fun TrailMap(
                 onDismiss = {
                     selectedPoint = null
                 },
-                onFindTrail = { length, elevation ->
+                onFindTrail = { type, length, elevation ->
                     val point = selectedPoint!!
                     selectedPoint = null
-                    onFindTrail(point, length, elevation)
+                    onFindTrail(point, type, length, elevation)
                 }
             )
         }

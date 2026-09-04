@@ -7,6 +7,10 @@ import retrofit2.http.POST
 interface TrailApi {
     @GET("healthcheck")
     suspend fun health(): HealthResponse
-    @POST("trail")
-    suspend fun findTrail(@Body request: TrailRequest): TrailResponse
+
+    @POST("hiking-tour")
+    suspend fun findHikingTour(@Body request: TrailRequest): TrailResponse
+
+    @POST("bike-tour")
+    suspend fun findBikeTour(@Body request: TrailRequest): TrailResponse
 }
