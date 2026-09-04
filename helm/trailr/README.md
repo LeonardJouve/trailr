@@ -30,7 +30,7 @@ The preprocessing workflow publishes `trails.zip` on each GitHub release. To ini
 helm install trailr -n trailr -f helm/trailr/values.yaml --set neo4jBootstrap.enabled=true helm/trailr
 ```
 
-The chart downloads `https://github.com/LeonardJouve/trailr/releases/latest/download/trails.zip`, extracts the node and relationship CSV files, and runs `neo4j-admin database import full` before Neo4j starts. It records successful completion on the Neo4j data volume, so replacement pods do not repeat the import.
+The chart downloads `https://github.com/LeonardJouve/trailr/releases/latest/download/trails.zip`, extracts the wanderwege and veloland node and relationship CSV files, and runs `neo4j-admin database import full` before Neo4j starts. It records successful completion on the Neo4j data volume, so replacement pods do not repeat the import.
 
 For reproducible deployments, override `neo4jBootstrap.url` with a versioned release URL and set `neo4jBootstrap.sha256` to the release asset digest. Both GitHub's `sha256:<digest>` format and a bare hexadecimal digest are accepted. Digest verification is disabled by default because the contents of the latest release URL change. The importer limits Neo4j's off-heap memory to `neo4jBootstrap.maxOffHeapMemory`, which defaults to `1G`.
 

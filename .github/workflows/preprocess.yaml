@@ -53,6 +53,25 @@ jobs:
             mv "data/SWISSTLM3D_WANDERWEGE_${suffix}" "output/wanderwege_${suffix}"
           done
 
+      - name: Download veloland dataset
+        run: |
+          wget \
+            -O data/veloland.gdb.zip \
+            "https://data.geo.admin.ch/ch.astra.veloland/veloland/veloland_2056.gdb.zip"
+
+      - name: Extract veloland GDB
+        run: |
+          mkdir -p data/veloland
+          bsdtar -xf data/veloland.gdb.zip -C data/veloland/
+          mv data/veloland/*.gdb data/veloland.gdb
+
+      - name: Run veloland preprocessor
+        run: |
+          uv run graph data/veloland.json
+          for suffix in nodes.csv nodes.gdb edges.csv edges.gdb; do
+            mv "data/veloland_${suffix}" "output/veloland_${suffix}"
+          done
+
       - name: Upload output
         uses: actions/upload-artifact@v4
         with:
