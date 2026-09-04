@@ -1,0 +1,95 @@
+name: Tiles
+
+on:
+  workflow_call:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]*"
+
+permissions:
+  contents: write
+
+jobs:
+  tiles:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: preprocessor
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install the project
+        run: uv sync --locked --all-extras --dev
+
+      - name: Install tippecanoe
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsqlite3-dev zlib1g-dev
+          git clone --depth 1 https://github.com/felt/tippecanoe
+          make -C tippecanoe -j"$(nproc)"
+          sudo make -C tippecanoe install
+
+      - name: Install bsdtar
+        run: sudo apt-get install -y libarchive-tools
+
+      - name: Download wanderwege dataset
+        run: |
+          mkdir -p data
+          wget \
+            -O data/SWISSTLM3D_WANDERWEGE.gdb.zip \
+            "https://data.geo.admin.ch/ch.swisstopo.swisstlm3d-wanderwege/swisstlm3d-wanderwege/swisstlm3d-wanderwege_2056_5728.gdb.zip"
+
+      - name: Extract wanderwege GDB
+        run: bsdtar -xf data/SWISSTLM3D_WANDERWEGE.gdb.zip -C data/
+
+      - name: Download veloland dataset
+        run: |
+          wget \
+            -O data/veloland.gdb.zip \
+            "https://data.geo.admin.ch/ch.astra.veloland/veloland/veloland_2056.gdb.zip"
+
+      - name: Extract veloland GDB
+        run: |
+          mkdir -p data/veloland
+          bsdtar -xf data/veloland.gdb.zip -C data/veloland/
+          mv data/veloland/*.gdb data/veloland.gdb
+
+      - name: Export GeoJSON
+        run: |
+          uv run tiles data/SWISSTLM3D_WANDERWEGE.gdb TLM_STRASSE output/wanderwege.geojson
+          uv run tiles data/veloland.gdb VeloWeg output/veloland.geojson
+
+      - name: Generate vector tiles
+        run: |
+          tippecanoe \
+            -e output/tiles \
+            -Z8 -z15 \
+            --force \
+            -L '[{"file":"output/wanderwege.geojson","name":"wanderwege"},{"file":"output/veloland.geojson","name":"veloland"}]'
+
+      - name: Upload tiles artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tiles
+          path: preprocessor/output/tiles
+
+      - name: Upload tiles to GitHub release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          zip -r "$RUNNER_TEMP/trails-tiles.zip" output/tiles
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --target "$GITHUB_SHA" --generate-notes --title "$TAG" || \
+              gh release view "$TAG" >/dev/null
+          fi
+          gh release upload "$TAG" "$RUNNER_TEMP/trails-tiles.zip" --clobber
