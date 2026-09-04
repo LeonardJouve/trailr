@@ -43,7 +43,6 @@ jobs:
       - name: Extract GDB
         run: |
           bsdtar -xf data/SWISSTLM3D_WANDERWEGE.gdb.zip -C data/
-          mv data/*.gdb data/SWISSTLM3D_WANDERWEGE.gdb
       - name: Run preprocessor
         run: |
           uv run graph data/swiss3d.json
