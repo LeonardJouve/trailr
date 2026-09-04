@@ -3,3 +3,5 @@ data
 .env
 neo4j/*
 *.pb.go
+tiles/*
+!tiles/.gitkeep

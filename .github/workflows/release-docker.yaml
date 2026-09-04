@@ -10,7 +10,11 @@ permissions:
   packages: write
 
 jobs:
+  tiles:
+    uses: ./.github/workflows/tiles.yaml
+
   publish:
+    needs: tiles
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -24,6 +28,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Download trail tiles
+        uses: actions/download-artifact@v4
+        with:
+          name: tiles
+          path: api/tiles
 
       - name: Log in to GHCR
         env:
