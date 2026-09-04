@@ -23,15 +23,15 @@ func healthcheck(c *echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 }
 
-type TrailRequest struct {
+type TourRequest struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
 	Length    uint    `json:"length" validate:"gt=0,lte=25000"`
 	Elevation uint    `json:"elevation" validate:"gte=0,lte=2000"`
 }
 
-func findTrail(c *echo.Context) error {
-	var request TrailRequest
+func findTour(c *echo.Context, graphType trail.GraphType) error {
+	var request TourRequest
 
 	if err := c.Bind(&request); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
@@ -43,19 +43,19 @@ func findTrail(c *echo.Context) error {
 
 	x, y := geo.WGS84ToLV95(request.Latitude, request.Longitude)
 
-	origin, err := trail.GetClosestNode(x, y)
+	origin, err := trail.GetClosestNode(x, y, graphType)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to find closest node")
 	}
 
-	graph, err := trail.CreateGraph(origin, request.Length)
+	graph, err := trail.CreateGraph(origin, request.Length, graphType)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to create graph")
 	}
 
 	defer trail.DropGraph(graph)
 
-	nodes, edges, err := trail.GetReachableGraph(origin, graph, uint(float32(request.Length)*0.65))
+	nodes, edges, err := trail.GetReachableGraph(origin, graph, uint(float32(request.Length)*0.65), graphType)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to find reachable graph")
 	}
@@ -95,6 +95,14 @@ func findTrail(c *echo.Context) error {
 	})
 }
 
+func findHikingTour(c *echo.Context) error {
+	return findTour(c, trail.GraphTypeTrail)
+}
+
+func findBikeTour(c *echo.Context) error {
+	return findTour(c, trail.GraphTypeBike)
+}
+
 func filterEdges(edges []*proto.Edge, edgeUUIDs []string) []*proto.Edge {
 	edgeSet := make(map[string]*proto.Edge, len(edgeUUIDs))
 
@@ -120,7 +128,8 @@ func Start(port int) (func(), error) {
 	e.Use(middleware.Recover())
 
 	e.GET("/healthcheck", healthcheck)
-	e.POST("/trail", findTrail)
+	e.POST("/hiking-tour", findHikingTour)
+	e.POST("/bike-tour", findBikeTour)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 

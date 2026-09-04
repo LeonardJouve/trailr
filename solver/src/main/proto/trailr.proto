@@ -44,25 +44,8 @@ message Node {
 
 message Edge {
     string uuid = 1;
-    TrailType trail_type = 2;
-    SurfaceType surface_type = 3;
     int32 from_node = 4;
     int32 to_node = 5;
     double length = 6;
     repeated Coordinate coordinates = 7;
-}
-
-enum SurfaceType {
-    UNSET = 0;
-    ROAD = 100;
-    PATH = 200;
-    UNKNOWN = 999997;
-    NONE = 999998;
-}
-
-enum TrailType {
-    HIKING_TRAIL = 0;
-    MOUNTAIN_HIKING_TRAIL = 1;
-    ALPINE_HIKING_TRAIL = 2;
-    OTHER = 3;
 }

@@ -14,7 +14,20 @@ import (
 
 const MAX_INITIAL_RANGE = 1000
 
-func GetClosestNode(x float64, y float64) (int32, error) {
+type GraphType struct {
+	label string
+}
+
+var (
+	GraphTypeTrail = GraphType{"trail"}
+	GraphTypeBike  = GraphType{"bike"}
+)
+
+func (g GraphType) String() string {
+	return g.label
+}
+
+func GetClosestNode(x float64, y float64, graphType GraphType) (int32, error) {
 	db, err := database.GetInstance()
 	if err != nil {
 		return 0, err
@@ -22,14 +35,14 @@ func GetClosestNode(x float64, y float64) (int32, error) {
 
 	records, err := database.Query(
 		db,
-		`
+		fmt.Sprintf(`
         WITH point({
             x: $x,
             y: $y,
             crs: 'cartesian'
         }) AS origin
 
-        MATCH (n:Node)
+        MATCH (n:Node:%s)
         WITH n, origin, point({
             x: n.x,
             y: n.y,
@@ -41,7 +54,7 @@ func GetClosestNode(x float64, y float64) (int32, error) {
         RETURN n.id AS id
         ORDER BY point.distance(nodePoint, origin)
         LIMIT 1;
-        `,
+        `, graphType),
 		map[string]any{
 			"x":     x,
 			"y":     y,
@@ -77,7 +90,7 @@ func GetClosestNode(x float64, y float64) (int32, error) {
 	return records[0], nil
 }
 
-func CreateGraph(origin int32, radius uint) (string, error) {
+func CreateGraph(origin int32, radius uint, graphType GraphType) (string, error) {
 	db, err := database.GetInstance()
 	if err != nil {
 		return "", err
@@ -87,17 +100,17 @@ func CreateGraph(origin int32, radius uint) (string, error) {
 
 	_, err = database.Query(
 		db,
-		`
-        MATCH (origin:Node {id: $origin})
+		fmt.Sprintf(`
+        MATCH (origin:Node:%s {id: $origin})
         CALL gds.graph.project.cypher(
             $name,
             '
-            MATCH (n:Node)
+            MATCH (n:Node:%s)
             WHERE point.distance(n.location, $origin) <= $radius
             RETURN id(n) AS id
             ',
             '
-            MATCH (a:Node)-[e:EDGE]-(b:Node)
+            MATCH (a:Node:%s)-[e:%s]-(b:Node:%s)
             WHERE point.distance(a.location, $origin) <= $radius
             AND point.distance(b.location, $origin) <= $radius
             RETURN
@@ -114,7 +127,7 @@ func CreateGraph(origin int32, radius uint) (string, error) {
         )
         YIELD graphName
         RETURN graphName;
-        `,
+        `, graphType, graphType, graphType, graphType, graphType),
 		map[string]any{
 			"origin": strconv.FormatInt(int64(origin), 10),
 			"name":   name,
@@ -180,7 +193,7 @@ func parseCoordinates(rawCoordinates string) ([]*proto.Coordinate, error) {
 	return coordinates, nil
 }
 
-func GetReachableGraph(origin int32, graph string, radius uint) ([]*proto.Node, []*proto.Edge, error) {
+func GetReachableGraph(origin int32, graph string, radius uint, graphType GraphType) ([]*proto.Node, []*proto.Edge, error) {
 	db, err := database.GetInstance()
 	if err != nil {
 		return []*proto.Node{}, []*proto.Edge{}, err
@@ -188,8 +201,8 @@ func GetReachableGraph(origin int32, graph string, radius uint) ([]*proto.Node, 
 
 	records, err := database.Query(
 		db,
-		`
-        MATCH (origin:Node {id: $origin})
+		fmt.Sprintf(`
+        MATCH (origin:Node:%s {id: $origin})
         CALL gds.allShortestPaths.dijkstra.stream($graph, {
             sourceNode: origin,
             relationshipWeightProperty: 'length'
@@ -199,7 +212,7 @@ func GetReachableGraph(origin int32, graph string, radius uint) ([]*proto.Node, 
         UNWIND nodes(path) AS n
         WITH collect(DISTINCT n) AS nodes
         UNWIND nodes AS a
-        MATCH (a)-[e:EDGE]-(b:Node)
+        MATCH (a)-[e:%s]-(b:Node)
         WHERE b IN nodes
         RETURN DISTINCT
             {
@@ -210,8 +223,6 @@ func GetReachableGraph(origin int32, graph string, radius uint) ([]*proto.Node, 
             } AS a,
             {
                 uuid: e.uuid,
-                trail_type: e.trail_type,
-                surface_type: e.surface_type,
                 from_node: startNode(e).id,
                 to_node: endNode(e).id,
                 length: e.length,
@@ -223,7 +234,7 @@ func GetReachableGraph(origin int32, graph string, radius uint) ([]*proto.Node, 
                 y: b.y,
                 z: b.z
             } AS b;
-        `,
+        `, graphType, graphType),
 		map[string]any{
 			"origin": strconv.FormatInt(int64(origin), 10),
 			"graph":  graph,
@@ -269,16 +280,6 @@ func GetReachableGraph(origin int32, graph string, radius uint) ([]*proto.Node, 
 				return graphRecord{}, fmt.Errorf("invalid edge.to_node type: %T", edge["to_node"])
 			}
 
-			trailType, ok := edge["trail_type"].(int64)
-			if !ok {
-				return graphRecord{}, fmt.Errorf("invalid trail_type type: %T", edge["trail_type"])
-			}
-
-			surfaceType, ok := edge["surface_type"].(int64)
-			if !ok {
-				return graphRecord{}, fmt.Errorf("invalid surface_type type: %T", edge["surface_type"])
-			}
-
 			rawCoordinates, ok := edge["coordinates"].(string)
 			if !ok {
 				return graphRecord{}, fmt.Errorf("invalid coordinates type: %T", edge["coordinates"])
@@ -308,8 +309,6 @@ func GetReachableGraph(origin int32, graph string, radius uint) ([]*proto.Node, 
 				},
 				Edge: &proto.Edge{
 					Uuid:        edge["uuid"].(string),
-					TrailType:   proto.TrailType(trailType),
-					SurfaceType: proto.SurfaceType(surfaceType),
 					FromNode:    int32(fromNodeId),
 					ToNode:      int32(toNodeId),
 					Length:      edge["length"].(float64),
