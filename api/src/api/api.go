@@ -121,7 +121,7 @@ func filterEdges(edges []*proto.Edge, edgeUUIDs []string) []*proto.Edge {
 	return filtered
 }
 
-func Start(port int) (func(), error) {
+func newServer(tilesDir string) *echo.Echo {
 	e := echo.New()
 
 	e.Use(middleware.RequestLogger())
@@ -130,6 +130,13 @@ func Start(port int) (func(), error) {
 	e.GET("/healthcheck", healthcheck)
 	e.POST("/hiking-tour", findHikingTour)
 	e.POST("/bike-tour", findBikeTour)
+	e.Static("/tiles", tilesDir)
+
+	return e
+}
+
+func Start(port int) (func(), error) {
+	e := newServer("tiles")
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 
