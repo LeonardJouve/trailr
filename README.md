@@ -20,25 +20,23 @@ docker compose up -d
 
 The `Tiles` workflow (`.github/workflows/tiles.yaml`) generates vector tiles of
 the swisstopo trail networks from the wanderwege and veloland GDBs. It runs on
-release tags and whenever the Docker images are released; the tiles are baked
-into the API image and served at `/tiles/{z}/{x}/{y}.pbf`.
+release tags and publishes `trails-tiles.zip` as a release asset.
 
-For local development, download `trails-tiles.zip` from the GitHub release and
-extract it so the tiles tree lives at `api/tiles/` before building:
+Tiles are loaded at runtime, not shipped inside the Docker images. The API
+serves them at `/tiles/{z}/{x}/{y}.pbf` from the directory set by the
+`TILES_DIR` environment variable. In Kubernetes the Helm chart downloads the
+release archive into the API pod at startup (see
+[helm/trailr/README.md](helm/trailr/README.md)).
 
-```sh
-docker compose build api
-```
-
-Without tiles in `api/tiles/` the API still runs; the app simply shows no
-trail overlay.
+For local development, `docker compose` mounts `preprocessor/data/tiles` into
+the API container. If that directory is empty the API still runs; the app
+simply shows no trail overlay.
 
 ### Generate the tiles locally
 
-Instead of downloading the release artifact, generate the tiles yourself with
-the tiles Docker image (see `preprocessor/README.md`). First export the
-GeoJSON for both networks into `data/`, then build and run the image with the
-project directory mounted:
+See `preprocessor/README.md`. First export the GeoJSON for both networks into
+`preprocessor/data/`, then build and run the tiles image with the project
+directory mounted:
 
 ```sh
 cd preprocessor
@@ -49,8 +47,8 @@ docker run --rm -v ".:/work" trailr-tiles
 ```
 
 The container compiles tippecanoe and writes the `z/x/y.pbf` tile tree to
-`preprocessor/data/tiles/`. Copy that tree into `api/tiles/` before building
-the API image.
+`preprocessor/data/tiles/`, which `docker compose` picks up on the next
+`docker compose up`.
 
 ## Android APK releases
 
