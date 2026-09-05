@@ -77,5 +77,21 @@ uv run tiles <input_gdb> <layer> <output.geojson>
 Example:
 
 ```bash
-uv run tiles data/SWISSTLM3D_WANDERWEGE.gdb TLM_STRASSE output/wanderwege.geojson
+uv run tiles data/SWISSTLM3D_WANDERWEGE.gdb TLM_STRASSE data/wanderwege.geojson
 ```
+
+## Generate vector tiles locally with Docker
+
+The PBF generation step of the `Tiles` workflow can be run locally in a
+container. Export the GeoJSON files into `data/` as above, then build and run
+the image with the project directory mounted:
+
+```bash
+docker build -t trailr-tiles .
+docker run --rm -v ".:/work" trailr-tiles
+```
+
+The container runs the same tippecanoe invocation as the workflow
+(`-e data/tiles -Z8 -z15 --force` with the `wanderwege` and `veloland`
+layers): it reads `wanderwege.geojson` and `veloland.geojson` from `data/`
+and writes the `z/x/y.pbf` tile tree to `data/tiles/`.

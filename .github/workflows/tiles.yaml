@@ -73,7 +73,8 @@ jobs:
             -e output/tiles \
             -Z8 -z15 \
             --force \
-            -L '[{"file":"output/wanderwege.geojson","name":"wanderwege"},{"file":"output/veloland.geojson","name":"veloland"}]'
+            -L '{"file":"output/wanderwege.geojson","layer":"wanderwege"}' \
+            -L '{"file":"output/veloland.geojson","layer":"veloland"}'
 
       - name: Upload tiles artifact
         uses: actions/upload-artifact@v4

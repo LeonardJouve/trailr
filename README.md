@@ -33,6 +33,25 @@ docker compose build api
 Without tiles in `api/tiles/` the API still runs; the app simply shows no
 trail overlay.
 
+### Generate the tiles locally
+
+Instead of downloading the release artifact, generate the tiles yourself with
+the tiles Docker image (see `preprocessor/README.md`). First export the
+GeoJSON for both networks into `data/`, then build and run the image with the
+project directory mounted:
+
+```sh
+cd preprocessor
+uv run tiles data/SWISSTLM3D_WANDERWEGE.gdb TLM_STRASSE data/wanderwege.geojson
+uv run tiles data/veloland.gdb VeloWeg data/veloland.geojson
+docker build -t trailr-tiles .
+docker run --rm -v ".:/work" trailr-tiles
+```
+
+The container compiles tippecanoe and writes the `z/x/y.pbf` tile tree to
+`preprocessor/data/tiles/`. Copy that tree into `api/tiles/` before building
+the API image.
+
 ## Android APK releases
 
 The `Release Android APK` GitHub Actions workflow builds a signed APK and
