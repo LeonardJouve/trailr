@@ -66,4 +66,6 @@ overridable with `tilesBootstrap.url`. For reproducible deployments set
 the asset digest; both GitHub's
 `sha256:<digest>` format and a bare hexadecimal digest are accepted. Digest
 verification is disabled by default because the contents of the latest
-release URL change.
+release URL change. Deploy this chart revision before any release whose image
+requires `TILES_DIR`; pods started with an older chart crash-loop because the
+API demands the variable.
