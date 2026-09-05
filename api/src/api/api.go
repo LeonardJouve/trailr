@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"net/http"
 	"os"
@@ -18,6 +19,18 @@ import (
 )
 
 var validate = validator.New(validator.WithRequiredStructEnabled())
+
+//go:embed style.json
+var styleFS embed.FS
+
+func serveStyle(c *echo.Context) error {
+	style, err := styleFS.ReadFile("style.json")
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "failed to read style")
+	}
+
+	return c.Blob(http.StatusOK, "application/json", style)
+}
 
 func healthcheck(c *echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
@@ -128,6 +141,7 @@ func newServer(tilesDir string) *echo.Echo {
 	e.Use(middleware.Recover())
 
 	e.GET("/healthcheck", healthcheck)
+	e.GET("/style.json", serveStyle)
 	e.POST("/hiking-tour", findHikingTour)
 	e.POST("/bike-tour", findBikeTour)
 	e.Static("/tiles", tilesDir)

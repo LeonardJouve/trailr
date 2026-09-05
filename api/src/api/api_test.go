@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -45,5 +46,28 @@ func TestMissingTileReturnsNotFound(t *testing.T) {
 
 	if recorder.Code != http.StatusNotFound {
 		t.Fatalf("expected status 404, got %d", recorder.Code)
+	}
+}
+
+func TestStyleServed(t *testing.T) {
+	server := newServer(t.TempDir())
+
+	request := httptest.NewRequest(http.MethodGet, "/style.json", nil)
+	recorder := httptest.NewRecorder()
+
+	server.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", recorder.Code)
+	}
+
+	body := recorder.Body.String()
+	if !strings.Contains(body, `"tiles/{z}/{x}/{y}.pbf"`) {
+		t.Fatalf(`style must reference tiles with the relative path "tiles/{z}/{x}/{y}.pbf", got: %s`, body)
+	}
+	for _, layer := range []string{`"wanderwege"`, `"veloland"`} {
+		if !strings.Contains(body, layer) {
+			t.Fatalf("style is missing source-layer %s", layer)
+		}
 	}
 }
