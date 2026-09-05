@@ -39,10 +39,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import ch.trailer.android.SelectedPoint
+import ch.trailer.android.api.NetworkModule
 import ch.trailer.android.api.TourType
 import ch.trailer.android.database.TrailEntity
 import ch.trailer.android.domain.MapLayers
-import ch.trailer.android.domain.MapStyle
 import ch.trailer.android.domain.parseElevationProfile
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -123,8 +123,8 @@ fun TrailMap(
                     MapView(context).apply {
                         mapViewRef = this
                         getMapAsync { map ->
-                            map.setStyle(MapStyle.load(context)) { style ->
-                                println("SwissTopo style loaded")
+                            map.setStyle(NetworkModule.STYLE_URL) { style ->
+                                println("style loaded")
 
                                 val locationComponent = map.locationComponent
 

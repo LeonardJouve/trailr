@@ -10,6 +10,8 @@ import java.util.concurrent.TimeUnit
 object NetworkModule {
     private const val BASE_URL = ch.trailer.android.BuildConfig.API_URL
 
+    val STYLE_URL: String = BASE_URL + "style.json"
+
     private val json = Json {
         ignoreUnknownKeys = true
     }

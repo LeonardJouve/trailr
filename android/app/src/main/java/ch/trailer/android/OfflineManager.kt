@@ -2,6 +2,7 @@ package ch.trailer.android
 
 import android.content.Context
 import ch.trailer.android.api.GeoJsonFeature
+import ch.trailer.android.api.NetworkModule
 import ch.trailer.android.database.TrailEntity
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
@@ -96,7 +97,7 @@ class OfflineMapManager(private val appContext: Context) {
         onError: (String) -> Unit
     ) {
         val definition = OfflineTilePyramidRegionDefinition(
-            "asset://swisstopo.json",
+            NetworkModule.STYLE_URL,
             bounds,
             minZoom,
             maxZoom,
