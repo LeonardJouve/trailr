@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -134,11 +135,22 @@ func filterEdges(edges []*proto.Edge, edgeUUIDs []string) []*proto.Edge {
 	return filtered
 }
 
+func tilesMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c *echo.Context) error {
+		if path := c.Request().URL.Path; strings.HasPrefix(path, "/tiles/") && strings.HasSuffix(path, ".pbf") {
+			c.Response().Header().Set("Content-Encoding", "gzip")
+		}
+
+		return next(c)
+	}
+}
+
 func newServer(tilesDir string) *echo.Echo {
 	e := echo.New()
 
 	e.Use(middleware.RequestLogger())
 	e.Use(middleware.Recover())
+	e.Use(tilesMiddleware)
 
 	e.GET("/healthcheck", healthcheck)
 	e.GET("/style.json", serveStyle)
