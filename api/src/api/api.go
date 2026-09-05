@@ -135,8 +135,8 @@ func newServer(tilesDir string) *echo.Echo {
 	return e
 }
 
-func Start(port int) (func(), error) {
-	e := newServer("tiles")
+func Start(port int, tilesDir string) (func(), error) {
+	e := newServer(tilesDir)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 

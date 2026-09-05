@@ -24,7 +24,6 @@ RUN apk --no-cache add ca-certificates
 
 WORKDIR /app
 COPY --from=build /app/trailr-api /app/trailr-api
-COPY --from=build /app/api/tiles /app/tiles
 
 ENV ENVIRONMENT=PRODUCTION
 

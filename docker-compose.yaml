@@ -35,13 +35,15 @@ services:
       - "${API_PORT}:3000"
     networks:
       - trailr
+    volumes:
+      - ./preprocessor/data/tiles:/app/tiles
     environment:
-      ENVIRONMENT: PRODUCTION
       DATABASE_URI: ${DATABASE_URI}
       DATABASE_USER: ${DATABASE_USER}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD}
       API_PORT: 3000
       SOLVER_URI: ${SOLVER_URI}
+      TILES_DIR: /app/tiles
     depends_on:
       neo4j:
         condition: service_healthy

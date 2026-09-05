@@ -1,5 +1,4 @@
-The API also serves trail vector tiles at `GET /tiles/{z}/{x}/{y}.pbf` from the
-`tiles` directory (baked into the Docker image by the release workflow).
+The API also serves trail vector tiles at `GET /tiles/{z}/{x}/{y}.pbf` from the directory set by the `TILES_DIR` environment variable.
 
 ```
 docker compose run --rm neo4j neo4j-admin database import full neo4j --nodes=Node=/var/lib/neo4j/import/wanderwege_nodes.csv --relationships=/var/lib/neo4j/import/wanderwege_edges.csv --overwrite-destination

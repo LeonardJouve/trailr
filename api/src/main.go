@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"errors"
 	"os"
 	"strconv"
 
@@ -44,7 +45,12 @@ func main() {
 		panic(err)
 	}
 
-	stop, err := api.Start(int(port))
+	tilesDir := os.Getenv("TILES_DIR")
+	if tilesDir == "" {
+		panic(errors.New("TILES_DIR not set"))
+	}
+
+	stop, err := api.Start(int(port), tilesDir)
 	if err != nil {
 		panic(err)
 	}
