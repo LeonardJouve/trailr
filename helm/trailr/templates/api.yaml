@@ -16,6 +16,31 @@ spec:
         app: api
         release: {{ .Release.Name }}
     spec:
+      initContainers:
+        - name: download-tiles
+          image: alpine:3.22
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              apk add --no-cache unzip
+              wget -qO /tiles/trails-tiles.zip "$TILES_URL"
+              if [ -n "$TILES_SHA256" ]; then
+                checksum="${TILES_SHA256#sha256:}"
+                echo "$checksum  /tiles/trails-tiles.zip" | sha256sum -c -
+              fi
+              unzip -oq /tiles/trails-tiles.zip -d /tiles
+              rm /tiles/trails-tiles.zip
+              test -d /tiles/output/tiles/8
+          env:
+            - name: TILES_URL
+              value: {{ .Values.tiles.url | quote }}
+            - name: TILES_SHA256
+              value: {{ .Values.tiles.sha256 | quote }}
+          volumeMounts:
+            - name: tiles
+              mountPath: /tiles
       containers:
         - name: api
           image: {{ .Values.apiImage }}
@@ -30,6 +55,8 @@ spec:
               value: "bolt://{{ .Release.Name }}-neo4j:7687"
             - name: SOLVER_URI
               value: "{{ .Release.Name }}-solver:3001"
+            - name: TILES_DIR
+              value: /tiles/output/tiles
             - name: DATABASE_USER
               valueFrom:
                 secretKeyRef:
@@ -49,6 +76,13 @@ spec:
             tcpSocket:
               port: 3000
             periodSeconds: 10
+          volumeMounts:
+            - name: tiles
+              mountPath: /tiles
+              readOnly: true
+      volumes:
+        - name: tiles
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

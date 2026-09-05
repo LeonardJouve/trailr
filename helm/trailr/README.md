@@ -49,3 +49,19 @@ Deleting the PVC permanently deletes the current Neo4j database. To inspect boot
 kubectl logs -n trailr trailr-neo4j-0 -c download-import
 kubectl logs -n trailr trailr-neo4j-0 -c import-database
 ```
+
+## Trail tiles
+
+The API serves vector tiles at `/tiles/{z}/{x}/{y}.pbf` and needs a tiles
+directory at startup. A `download-tiles` init container fetches
+`trails-tiles.zip` from the GitHub release into a pod-local volume that the
+API container mounts read-only, so tiles are loaded at runtime and each pod
+re-downloads and unpacks the archive when it starts.
+
+The default source is
+`https://github.com/LeonardJouve/trailr/releases/latest/download/trails-tiles.zip`,
+overridable with `tiles.url`. For reproducible deployments set `tiles.url` to
+a versioned release URL and `tiles.sha256` to the asset digest; both GitHub's
+`sha256:<digest>` format and a bare hexadecimal digest are accepted. Digest
+verification is disabled by default because the contents of the latest
+release URL change.
