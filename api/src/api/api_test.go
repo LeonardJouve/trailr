@@ -62,8 +62,8 @@ func TestStyleServed(t *testing.T) {
 	}
 
 	body := recorder.Body.String()
-	if !strings.Contains(body, `"tiles/{z}/{x}/{y}.pbf"`) {
-		t.Fatalf(`style must reference tiles with the relative path "tiles/{z}/{x}/{y}.pbf", got: %s`, body)
+	if !strings.Contains(body, `"https://trail.famillejouve.ch/tiles/{z}/{x}/{y}.pbf"`) {
+		t.Fatalf(`style must reference tiles with the hardcoded absolute url, got: %s`, body)
 	}
 	for _, layer := range []string{`"wanderwege"`, `"veloland"`} {
 		if !strings.Contains(body, layer) {
