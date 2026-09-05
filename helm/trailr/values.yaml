@@ -4,7 +4,7 @@ neo4jImage: neo4j:2026.06.0
 storage: 10Gi
 host: trail.famillejouve.ch
 
-tiles:
+tilesBootstrap:
   url: https://github.com/LeonardJouve/trailr/releases/latest/download/trails-tiles.zip
   sha256: ""
 

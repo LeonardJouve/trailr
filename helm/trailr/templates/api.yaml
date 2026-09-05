@@ -30,14 +30,16 @@ spec:
                 checksum="${TILES_SHA256#sha256:}"
                 echo "$checksum  /tiles/trails-tiles.zip" | sha256sum -c -
               fi
-              unzip -oq /tiles/trails-tiles.zip -d /tiles
+              unzip -oq /tiles/trails-tiles.zip -d /tiles/stage
+              mv /tiles/stage/output/tiles/* /tiles/
+              rm -rf /tiles/stage
               rm /tiles/trails-tiles.zip
-              test -d /tiles/output/tiles/8
+              test -d /tiles/8
           env:
             - name: TILES_URL
-              value: {{ .Values.tiles.url | quote }}
+              value: {{ .Values.tilesBootstrap.url | quote }}
             - name: TILES_SHA256
-              value: {{ .Values.tiles.sha256 | quote }}
+              value: {{ .Values.tilesBootstrap.sha256 | quote }}
           volumeMounts:
             - name: tiles
               mountPath: /tiles
@@ -56,7 +58,7 @@ spec:
             - name: SOLVER_URI
               value: "{{ .Release.Name }}-solver:3001"
             - name: TILES_DIR
-              value: /tiles/output/tiles
+              value: /tiles
             - name: DATABASE_USER
               valueFrom:
                 secretKeyRef:
