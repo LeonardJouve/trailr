@@ -125,6 +125,10 @@ func findMtbTour(c *echo.Context) error {
 	return findTour(c, trail.GraphTypeMtb)
 }
 
+func findSkiTour(c *echo.Context) error {
+	return findTour(c, trail.GraphTypeSki)
+}
+
 func filterEdges(edges []*proto.Edge, edgeUUIDs []string) []*proto.Edge {
 	edgeSet := make(map[string]*proto.Edge, len(edgeUUIDs))
 
@@ -166,6 +170,7 @@ func newServer(tilesDir string) *echo.Echo {
 	e.POST("/bike-tour", findBikeTour)
 	e.POST("/run-tour", findRunTour)
 	e.POST("/mtb-tour", findMtbTour)
+	e.POST("/ski-tour", findSkiTour)
 	e.Static("/tiles", tilesDir)
 
 	return e

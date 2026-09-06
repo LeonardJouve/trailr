@@ -2,23 +2,35 @@ ch.astra.wanderland
 ch.astra.veloland ch.astra.mountainbikeland
 ch.swisstopo-karto.skitouren ch.swisstopo.unterkuenfte-winter
 
-satellite layer
-layer picker -> trails layer
+layer picker
 tour, straight
 
 docker compose up
 
 docker compose down
 
-docker compose run --rm neo4j neo4j-admin database import full neo4j --nodes=Node=/var/lib/neo4j/import/wanderwege_nodes.csv --nodes=Node=/var/lib/neo4j/import/veloland_nodes.csv --nodes=Node=/var/lib/neo4j/import/wanderland_nodes.csv --nodes=Node=/var/lib/neo4j/import/mtbland_nodes.csv --relationships=/var/lib/neo4j/import/wanderwege_edges.csv --relationships=/var/lib/neo4j/import/veloland_edges.csv --relationships=/var/lib/neo4j/import/wanderland_edges.csv --relationships=/var/lib/neo4j/import/mtbland_edges.csv --overwrite-destination
+docker compose run --rm neo4j neo4j-admin database import full neo4j --nodes=Node=/var/lib/neo4j/import/wanderwege_nodes.csv --nodes=Node=/var/lib/neo4j/import/veloland_nodes.csv --nodes=Node=/var/lib/neo4j/import/wanderland_nodes.csv --nodes=Node=/var/lib/neo4j/import/mtbland_nodes.csv --nodes=Node=/var/lib/neo4j/import/skitouren_nodes.csv --relationships=/var/lib/neo4j/import/wanderwege_edges.csv --relationships=/var/lib/neo4j/import/veloland_edges.csv --relationships=/var/lib/neo4j/import/wanderland_edges.csv --relationships=/var/lib/neo4j/import/mtbland_edges.csv --relationships=/var/lib/neo4j/import/skitouren_edges.csv --overwrite-destination
 
 docker compose up -d
+
+## Regenerate graph CSVs
+
+The `Preprocess` workflow builds the node/edge CSVs imported above. To
+regenerate them locally, run the graph command per layer from
+`preprocessor/` (e.g. `uv run graph data/swiss3d.json`). The skitouren
+source is 2D, so it must be draped with swissALTI3D elevations once first
+(writes `data/skitouren.gdb`, needs network access, several minutes):
+
+```sh
+uv run drape data/skitouren_2056.gpkg/ski_network_2056.gpkg ski_network_2056 data/skitouren.gdb
+uv run graph data/skitouren.json
+```
 
 [Helm chart documentation](helm/trailr/README.md)
 
 ## Trail map tiles
 
-The `Tiles` workflow (`.github/workflows/tiles.yaml`) generates vector tiles of the swisstopo trail networks from the wanderwege, veloland, wanderland and mtbland GDBs.
+The `Tiles` workflow (`.github/workflows/tiles.yaml`) generates vector tiles of the swisstopo trail networks from the wanderwege, veloland, wanderland, mtbland GDBs and the skitouren GPKG.
 It runs on
 release tags and publishes `trails-tiles.zip` as a release asset.
 
@@ -34,7 +46,10 @@ simply shows no trail overlay.
 
 ### Generate the tiles locally
 
-See `preprocessor/README.md`. First export the GeoJSON for all four networks into `preprocessor/data/`, then build and run the tiles image with the project directory mounted:
+See `preprocessor/README.md`. First download the skitouren GPKG zip
+(https://data.geo.admin.ch/ch.swisstopo-karto.skitouren/skitouren/skitouren_2056.gpkg.zip)
+and extract it into `data/skitouren_2056.gpkg/`. Then export the GeoJSON for all four networks into `preprocessor/data/`, and build and run the tiles image with the project
+directory mounted:
 
 ```sh
 cd preprocessor
@@ -42,6 +57,7 @@ uv run tiles data/SWISSTLM3D_WANDERWEGE.gdb TLM_STRASSE data/wanderwege.geojson
 uv run tiles data/veloland.gdb VeloWeg data/veloland.geojson
 uv run tiles data/wanderland.gdb WanderWeg data/wanderland.geojson
 uv run tiles data/mtbland.gdb MTBWeg data/mtbland.geojson
+uv run tiles data/skitouren_2056.gpkg/ski_network_2056.gpkg ski_network_2056 data/skitouren.geojson
 docker build -t trailr-tiles .
 docker run --rm -v ".:/work" trailr-tiles
 ```

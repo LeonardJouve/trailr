@@ -1,0 +1,12 @@
+{
+  "dataset": "skitouren.gdb",
+  "layer": "ski_network_2056",
+  "type": "ski",
+  "output_folder": ".",
+  "fields": {
+    "segm_id": "uuid:string",
+    "discipline": "discipline:string",
+    "access": "access:int",
+    "direction": "direction:int"
+  }
+}

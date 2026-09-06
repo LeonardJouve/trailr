@@ -9,5 +9,6 @@ object MapLayers {
         TourType.BIKE -> "veloland"
         TourType.RUNNING -> "wanderland"
         TourType.MOUNTAIN_BIKE -> "mtbland"
+        TourType.SKI -> "skitouren"
     }
 }

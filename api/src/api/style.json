@@ -71,6 +71,19 @@
         "line-color": "#2196F3",
         "line-width": 2
       }
+    },
+    {
+      "id": "skitouren",
+      "type": "line",
+      "source": "trails",
+      "source-layer": "skitouren",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "line-color": "#2196F3",
+        "line-width": 2
+      }
     }
   ]
 }

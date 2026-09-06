@@ -129,6 +129,20 @@ func TestMtbTourRouteRegistered(t *testing.T) {
 	}
 }
 
+func TestSkiTourRouteRegistered(t *testing.T) {
+	server := newServer(t.TempDir())
+
+	request := httptest.NewRequest(http.MethodPost, "/ski-tour", strings.NewReader("{}"))
+	request.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+
+	server.ServeHTTP(recorder, request)
+
+	if recorder.Code == http.StatusNotFound {
+		t.Fatalf("POST /ski-tour is not registered")
+	}
+}
+
 func TestStyleServed(t *testing.T) {
 	server := newServer(t.TempDir())
 
@@ -145,7 +159,7 @@ func TestStyleServed(t *testing.T) {
 	if !strings.Contains(body, `"https://trail.famillejouve.ch/tiles/{z}/{x}/{y}.pbf"`) {
 		t.Fatalf(`style must reference tiles with the hardcoded absolute url, got: %s`, body)
 	}
-	for _, layer := range []string{`"wanderwege"`, `"veloland"`, `"wanderland"`, `"mtbland"`} {
+	for _, layer := range []string{`"wanderwege"`, `"veloland"`, `"wanderland"`, `"mtbland"`, `"skitouren"`} {
 		if !strings.Contains(body, layer) {
 			t.Fatalf("style is missing source-layer %s", layer)
 		}
