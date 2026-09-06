@@ -89,6 +89,25 @@ jobs:
             mv "data/wanderland_${suffix}" "output/wanderland_${suffix}"
           done
 
+      - name: Download mtbland dataset
+        run: |
+          wget \
+            -O data/mtbland.gdb.zip \
+            "https://data.geo.admin.ch/ch.astra.mountainbikeland/mountainbikeland/mountainbikeland_2056.gdb.zip"
+
+      - name: Extract mtbland GDB
+        run: |
+          mkdir -p data/mtbland
+          bsdtar -xf data/mtbland.gdb.zip -C data/mtbland/
+          mv data/mtbland/*.gdb data/mtbland.gdb
+
+      - name: Run mtbland preprocessor
+        run: |
+          uv run graph data/mtbland.json
+          for suffix in nodes.csv nodes.gdb edges.csv edges.gdb; do
+            mv "data/mtbland_${suffix}" "output/mtbland_${suffix}"
+          done
+
       - name: Upload output
         uses: actions/upload-artifact@v4
         with:
