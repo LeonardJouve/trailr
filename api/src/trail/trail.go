@@ -22,6 +22,7 @@ var (
 	GraphTypeTrail = GraphType{"trail"}
 	GraphTypeBike  = GraphType{"bike"}
 	GraphTypeRun   = GraphType{"run"}
+	GraphTypeMtb   = GraphType{"mtb"}
 )
 
 func (g GraphType) String() string {
