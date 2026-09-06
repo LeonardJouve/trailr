@@ -65,6 +65,25 @@ Each run writes four files to `output_folder`, named from the dataset stem:
 `<dataset>_nodes.gdb`, `<dataset>_nodes.csv`, `<dataset>_edges.gdb`, and
 `<dataset>_edges.csv`.
 
+## Drape 2D layers with swissALTI3D elevations
+
+Convert a 2D line layer into a 3D FileGDB by fetching the elevation of every
+unique vertex from the swisstopo profile API (network required):
+
+```bash
+uv run drape <input_dataset> <layer> <output.gdb>
+```
+
+Example (the skitouren network, before running `uv run graph data/skitouren.json`):
+
+```bash
+uv run drape data/skitouren_2056.gpkg/ski_network_2056.gpkg ski_network_2056 data/skitouren.gdb
+```
+
+The input layer must be in EPSG:2056 and contain only 2D `LineString` /
+`MultiLineString` geometry. Attributes, layer name and CRS are preserved;
+geometries are rebuilt as XYZ.
+
 ## Export GeoJSON for tiles
 
 Export a GDB layer as geometry-only WGS84 GeoJSON, the input for vector tile
