@@ -58,6 +58,19 @@
         "line-color": "#2196F3",
         "line-width": 2
       }
+    },
+    {
+      "id": "mtbland",
+      "type": "line",
+      "source": "trails",
+      "source-layer": "mtbland",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "line-color": "#2196F3",
+        "line-width": 2
+      }
     }
   ]
 }
