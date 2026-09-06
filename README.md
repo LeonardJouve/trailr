@@ -19,7 +19,7 @@ docker compose up -d
 ## Trail map tiles
 
 The `Tiles` workflow (`.github/workflows/tiles.yaml`) generates vector tiles of
-the swisstopo trail networks from the wanderwege, veloland and wanderland GDBs.
+the swisstopo trail networks from the wanderwege, veloland and wanderland GDBs and the skitouren GPKG.
 It runs on
 release tags and publishes `trails-tiles.zip` as a release asset.
 

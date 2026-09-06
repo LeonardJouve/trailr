@@ -34,7 +34,7 @@ The chart downloads `https://github.com/LeonardJouve/trailr/releases/latest/down
 
 For reproducible deployments, override `neo4jBootstrap.url` with a versioned release URL and set `neo4jBootstrap.sha256` to the release asset digest. Both GitHub's `sha256:<digest>` format and a bare hexadecimal digest are accepted. Digest verification is disabled by default because the contents of the latest release URL change. The importer limits Neo4j's off-heap memory to `neo4jBootstrap.maxOffHeapMemory`, which defaults to `1G`.
 
-This chart's bootstrap expects a `trails.zip` that contains all three networks' CSVs (including `wanderland`), so tag a release with the updated `Preprocess` workflow before installing or upgrading the chart. The import runs once per data volume: to pick up a newly added network in an existing deployment, delete the PVC (and with it the old database) so the statefulset re-bootstraps.
+This chart's bootstrap expects a `trails.zip` that contains all four networks' CSVs (including `skitouren`), so tag a release with the updated `Preprocess` workflow before installing or upgrading the chart. The import runs once per data volume: to pick up a newly added network in an existing deployment, delete the PVC (and with it the old database) so the statefulset re-bootstraps.
 
 Bootstrap refuses to overwrite an existing database. When replacing an existing disposable database, first stop Neo4j and delete its PVC:
 
