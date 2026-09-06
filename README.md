@@ -2,8 +2,7 @@ ch.astra.wanderland
 ch.astra.veloland ch.astra.mountainbikeland
 ch.swisstopo-karto.skitouren ch.swisstopo.unterkuenfte-winter
 
-satellite layer
-layer picker -> trails layer
+layer picker
 tour, straight
 
 docker compose up
