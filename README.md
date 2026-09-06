@@ -35,7 +35,9 @@ simply shows no trail overlay.
 
 ### Generate the tiles locally
 
-See `preprocessor/README.md`. First export the GeoJSON for all three networks into `preprocessor/data/`, then build and run the tiles image with the project
+See `preprocessor/README.md`. First download the skitouren GPKG zip
+(https://data.geo.admin.ch/ch.swisstopo-karto.skitouren/skitouren/skitouren_2056.gpkg.zip)
+and extract it into `data/skitouren_2056.gpkg/`. Then export the GeoJSON for all four networks into `preprocessor/data/`, and build and run the tiles image with the project
 directory mounted:
 
 ```sh
@@ -43,6 +45,7 @@ cd preprocessor
 uv run tiles data/SWISSTLM3D_WANDERWEGE.gdb TLM_STRASSE data/wanderwege.geojson
 uv run tiles data/veloland.gdb VeloWeg data/veloland.geojson
 uv run tiles data/wanderland.gdb WanderWeg data/wanderland.geojson
+uv run tiles data/skitouren_2056.gpkg/ski_network_2056.gpkg ski_network_2056 data/skitouren.geojson
 docker build -t trailr-tiles .
 docker run --rm -v ".:/work" trailr-tiles
 ```
