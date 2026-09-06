@@ -70,7 +70,11 @@ def load_config(config_path: Path) -> tuple[Path, Path, str, dict[str, str], str
 def ensure_3d(trails: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     # Scalar force_3d fills missing z with 0 and leaves existing z untouched,
     # so this is a no-op for datasets that are fully 3D (all existing GDBs).
-    if all(geometry.has_z for geometry in trails.geometry):
+    # Null geometries fail the guard and pass through force_3d (a verified
+    # no-op on None) so validate_input rejects them with a clear error.
+    if all(
+        geometry is not None and geometry.has_z for geometry in trails.geometry
+    ):
         return trails
 
     trails = trails.copy()

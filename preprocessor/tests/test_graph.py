@@ -41,6 +41,41 @@ class GeometryNormalizationTest(unittest.TestCase):
             [(0.0, 0.0, 5.0), (1.0, 1.0, 5.0)],
         )
 
+    def test_mixed_dimensions_keep_existing_z_and_fill_missing_z(self):
+        trails = self._frame(
+            [
+                LineString([(0, 0, 5), (1, 1, 5)]),
+                LineString([(2, 2), (3, 3)]),
+            ]
+        )
+
+        result = ensure_3d(trails)
+
+        self.assertEqual(
+            list(result.geometry.iloc[0].coords),
+            [(0.0, 0.0, 5.0), (1.0, 1.0, 5.0)],
+        )
+        self.assertEqual(
+            list(result.geometry.iloc[1].coords),
+            [(2.0, 2.0, 0.0), (3.0, 3.0, 0.0)],
+        )
+
+    def test_ensure_3d_passes_none_geometry_through(self):
+        trails = self._frame([LineString([(0, 0, 5), (1, 1, 5)]), None])
+
+        result = ensure_3d(trails)
+
+        self.assertIsNone(result.geometry.iloc[1])
+
+    def test_validate_input_rejects_none_geometry(self):
+        trails = self._frame(
+            [LineString([(0, 0, 5), (1, 1, 5)]), None],
+            uuid=["a", "b"],
+        )
+
+        with self.assertRaises(ValueError):
+            validate_input(ensure_3d(trails), {"uuid": "uuid:string"}, "ski")
+
     def test_validate_input_accepts_normalized_two_dimensional_lines(self):
         trails = self._frame([LineString([(0, 0), (1, 1)])], uuid=["a"])
 
