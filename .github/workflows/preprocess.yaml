@@ -70,6 +70,25 @@ jobs:
             mv "data/veloland_${suffix}" "output/veloland_${suffix}"
           done
 
+      - name: Download wanderland dataset
+        run: |
+          wget \
+            -O data/wanderland.gdb.zip \
+            "https://data.geo.admin.ch/ch.astra.wanderland/wanderland/wanderland_2056.gdb.zip"
+
+      - name: Extract wanderland GDB
+        run: |
+          mkdir -p data/wanderland
+          bsdtar -xf data/wanderland.gdb.zip -C data/wanderland/
+          mv data/wanderland/*.gdb data/wanderland.gdb
+
+      - name: Run wanderland preprocessor
+        run: |
+          uv run graph data/wanderland.json
+          for suffix in nodes.csv nodes.gdb edges.csv edges.gdb; do
+            mv "data/wanderland_${suffix}" "output/wanderland_${suffix}"
+          done
+
       - name: Upload output
         uses: actions/upload-artifact@v4
         with:
