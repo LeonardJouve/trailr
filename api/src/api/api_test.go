@@ -145,7 +145,7 @@ func TestStyleServed(t *testing.T) {
 	if !strings.Contains(body, `"https://trail.famillejouve.ch/tiles/{z}/{x}/{y}.pbf"`) {
 		t.Fatalf(`style must reference tiles with the hardcoded absolute url, got: %s`, body)
 	}
-	for _, layer := range []string{`"wanderwege"`, `"veloland"`, `"wanderland"`} {
+	for _, layer := range []string{`"wanderwege"`, `"veloland"`, `"wanderland"`, `"skitouren"`} {
 		if !strings.Contains(body, layer) {
 			t.Fatalf("style is missing source-layer %s", layer)
 		}
