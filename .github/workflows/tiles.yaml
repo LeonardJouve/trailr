@@ -74,11 +74,24 @@ jobs:
           bsdtar -xf data/wanderland.gdb.zip -C data/wanderland/
           mv data/wanderland/*.gdb data/wanderland.gdb
 
+      - name: Download mtbland dataset
+        run: |
+          wget \
+            -O data/mtbland.gdb.zip \
+            "https://data.geo.admin.ch/ch.astra.mountainbikeland/mountainbikeland/mountainbikeland_2056.gdb.zip"
+
+      - name: Extract mtbland GDB
+        run: |
+          mkdir -p data/mtbland
+          bsdtar -xf data/mtbland.gdb.zip -C data/mtbland/
+          mv data/mtbland/*.gdb data/mtbland.gdb
+
       - name: Export GeoJSON
         run: |
           uv run tiles data/SWISSTLM3D_WANDERWEGE.gdb TLM_STRASSE output/wanderwege.geojson
           uv run tiles data/veloland.gdb VeloWeg output/veloland.geojson
           uv run tiles data/wanderland.gdb WanderWeg output/wanderland.geojson
+          uv run tiles data/mtbland.gdb MTBWeg output/mtbland.geojson
 
       - name: Generate vector tiles
         run: |
@@ -88,7 +101,8 @@ jobs:
             --force \
             -L '{"file":"output/wanderwege.geojson","layer":"wanderwege"}' \
             -L '{"file":"output/veloland.geojson","layer":"veloland"}' \
-            -L '{"file":"output/wanderland.geojson","layer":"wanderland"}'
+            -L '{"file":"output/wanderland.geojson","layer":"wanderland"}' \
+            -L '{"file":"output/mtbland.geojson","layer":"mtbland"}'
 
       - name: Upload tiles artifact
         uses: actions/upload-artifact@v4
