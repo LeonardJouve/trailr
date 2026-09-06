@@ -89,6 +89,24 @@ jobs:
             mv "data/wanderland_${suffix}" "output/wanderland_${suffix}"
           done
 
+      - name: Download skitouren dataset
+        run: |
+          wget \
+            -O data/skitouren.gpkg.zip \
+            "https://data.geo.admin.ch/ch.swisstopo-karto.skitouren/skitouren/skitouren_2056.gpkg.zip"
+
+      - name: Extract skitouren GPKG
+        run: |
+          mkdir -p data/skitouren_2056.gpkg
+          bsdtar -xf data/skitouren.gpkg.zip -C data/skitouren_2056.gpkg/
+
+      - name: Run skitouren preprocessor
+        run: |
+          uv run graph data/skitouren.json
+          for suffix in nodes.csv nodes.gdb edges.csv edges.gdb; do
+            mv "data/ski_network_2056_${suffix}" "output/skitouren_${suffix}"
+          done
+
       - name: Upload output
         uses: actions/upload-artifact@v4
         with:
