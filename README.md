@@ -10,7 +10,7 @@ docker compose up
 
 docker compose down
 
-docker compose run --rm neo4j neo4j-admin database import full neo4j --nodes=Node=/var/lib/neo4j/import/wanderwege_nodes.csv --nodes=Node=/var/lib/neo4j/import/veloland_nodes.csv --nodes=Node=/var/lib/neo4j/import/wanderland_nodes.csv --relationships=/var/lib/neo4j/import/wanderwege_edges.csv --relationships=/var/lib/neo4j/import/veloland_edges.csv --relationships=/var/lib/neo4j/import/wanderland_edges.csv --overwrite-destination
+docker compose run --rm neo4j neo4j-admin database import full neo4j --nodes=Node=/var/lib/neo4j/import/wanderwege_nodes.csv --nodes=Node=/var/lib/neo4j/import/veloland_nodes.csv --nodes=Node=/var/lib/neo4j/import/wanderland_nodes.csv --nodes=Node=/var/lib/neo4j/import/mtbland_nodes.csv --relationships=/var/lib/neo4j/import/wanderwege_edges.csv --relationships=/var/lib/neo4j/import/veloland_edges.csv --relationships=/var/lib/neo4j/import/wanderland_edges.csv --relationships=/var/lib/neo4j/import/mtbland_edges.csv --overwrite-destination
 
 docker compose up -d
 
@@ -18,8 +18,7 @@ docker compose up -d
 
 ## Trail map tiles
 
-The `Tiles` workflow (`.github/workflows/tiles.yaml`) generates vector tiles of
-the swisstopo trail networks from the wanderwege, veloland and wanderland GDBs.
+The `Tiles` workflow (`.github/workflows/tiles.yaml`) generates vector tiles of the swisstopo trail networks from the wanderwege, veloland, wanderland and mtbland GDBs.
 It runs on
 release tags and publishes `trails-tiles.zip` as a release asset.
 
@@ -35,14 +34,14 @@ simply shows no trail overlay.
 
 ### Generate the tiles locally
 
-See `preprocessor/README.md`. First export the GeoJSON for all three networks into `preprocessor/data/`, then build and run the tiles image with the project
-directory mounted:
+See `preprocessor/README.md`. First export the GeoJSON for all four networks into `preprocessor/data/`, then build and run the tiles image with the project directory mounted:
 
 ```sh
 cd preprocessor
 uv run tiles data/SWISSTLM3D_WANDERWEGE.gdb TLM_STRASSE data/wanderwege.geojson
 uv run tiles data/veloland.gdb VeloWeg data/veloland.geojson
 uv run tiles data/wanderland.gdb WanderWeg data/wanderland.geojson
+uv run tiles data/mtbland.gdb MTBWeg data/mtbland.geojson
 docker build -t trailr-tiles .
 docker run --rm -v ".:/work" trailr-tiles
 ```
