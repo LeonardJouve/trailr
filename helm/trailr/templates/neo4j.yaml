@@ -58,6 +58,8 @@ spec:
                 output/veloland_edges.csv \
                 output/wanderland_nodes.csv \
                 output/wanderland_edges.csv \
+                output/skitouren_nodes.csv \
+                output/skitouren_edges.csv \
                 -d /import
               test -s /import/output/wanderwege_nodes.csv
               test -s /import/output/wanderwege_edges.csv
@@ -65,6 +67,8 @@ spec:
               test -s /import/output/veloland_edges.csv
               test -s /import/output/wanderland_nodes.csv
               test -s /import/output/wanderland_edges.csv
+              test -s /import/output/skitouren_nodes.csv
+              test -s /import/output/skitouren_edges.csv
           env:
             - name: IMPORT_URL
               value: {{ .Values.neo4jBootstrap.url | quote }}
@@ -100,9 +104,11 @@ spec:
                 --nodes=Node=/import/output/wanderwege_nodes.csv \
                 --nodes=Node=/import/output/veloland_nodes.csv \
                 --nodes=Node=/import/output/wanderland_nodes.csv \
+                --nodes=Node=/import/output/skitouren_nodes.csv \
                 --relationships=/import/output/wanderwege_edges.csv \
                 --relationships=/import/output/veloland_edges.csv \
                 --relationships=/import/output/wanderland_edges.csv \
+                --relationships=/import/output/skitouren_edges.csv \
                 --max-off-heap-memory={{ .Values.neo4jBootstrap.maxOffHeapMemory }} \
                 --overwrite-destination
               printf '%s\n' "$IMPORT_URL" > "$complete"
