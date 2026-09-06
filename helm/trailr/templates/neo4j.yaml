@@ -56,11 +56,15 @@ spec:
                 output/wanderwege_edges.csv \
                 output/veloland_nodes.csv \
                 output/veloland_edges.csv \
+                output/wanderland_nodes.csv \
+                output/wanderland_edges.csv \
                 -d /import
               test -s /import/output/wanderwege_nodes.csv
               test -s /import/output/wanderwege_edges.csv
               test -s /import/output/veloland_nodes.csv
               test -s /import/output/veloland_edges.csv
+              test -s /import/output/wanderland_nodes.csv
+              test -s /import/output/wanderland_edges.csv
           env:
             - name: IMPORT_URL
               value: {{ .Values.neo4jBootstrap.url | quote }}
@@ -95,8 +99,10 @@ spec:
               neo4j-admin database import full neo4j \
                 --nodes=Node=/import/output/wanderwege_nodes.csv \
                 --nodes=Node=/import/output/veloland_nodes.csv \
+                --nodes=Node=/import/output/wanderland_nodes.csv \
                 --relationships=/import/output/wanderwege_edges.csv \
                 --relationships=/import/output/veloland_edges.csv \
+                --relationships=/import/output/wanderland_edges.csv \
                 --max-off-heap-memory={{ .Values.neo4jBootstrap.maxOffHeapMemory }} \
                 --overwrite-destination
               printf '%s\n' "$IMPORT_URL" > "$complete"

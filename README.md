@@ -10,7 +10,7 @@ docker compose up
 
 docker compose down
 
-docker compose run --rm neo4j neo4j-admin database import full neo4j --nodes=Node=/var/lib/neo4j/import/wanderwege_nodes.csv --nodes=Node=/var/lib/neo4j/import/veloland_nodes.csv --relationships=/var/lib/neo4j/import/wanderwege_edges.csv --relationships=/var/lib/neo4j/import/veloland_edges.csv --overwrite-destination
+docker compose run --rm neo4j neo4j-admin database import full neo4j --nodes=Node=/var/lib/neo4j/import/wanderwege_nodes.csv --nodes=Node=/var/lib/neo4j/import/veloland_nodes.csv --nodes=Node=/var/lib/neo4j/import/wanderland_nodes.csv --relationships=/var/lib/neo4j/import/wanderwege_edges.csv --relationships=/var/lib/neo4j/import/veloland_edges.csv --relationships=/var/lib/neo4j/import/wanderland_edges.csv --overwrite-destination
 
 docker compose up -d
 
@@ -19,7 +19,8 @@ docker compose up -d
 ## Trail map tiles
 
 The `Tiles` workflow (`.github/workflows/tiles.yaml`) generates vector tiles of
-the swisstopo trail networks from the wanderwege and veloland GDBs. It runs on
+the swisstopo trail networks from the wanderwege, veloland and wanderland GDBs.
+It runs on
 release tags and publishes `trails-tiles.zip` as a release asset.
 
 Tiles are loaded at runtime, not shipped inside the Docker images. The API
@@ -34,14 +35,14 @@ simply shows no trail overlay.
 
 ### Generate the tiles locally
 
-See `preprocessor/README.md`. First export the GeoJSON for both networks into
-`preprocessor/data/`, then build and run the tiles image with the project
+See `preprocessor/README.md`. First export the GeoJSON for all three networks into `preprocessor/data/`, then build and run the tiles image with the project
 directory mounted:
 
 ```sh
 cd preprocessor
 uv run tiles data/SWISSTLM3D_WANDERWEGE.gdb TLM_STRASSE data/wanderwege.geojson
 uv run tiles data/veloland.gdb VeloWeg data/veloland.geojson
+uv run tiles data/wanderland.gdb WanderWeg data/wanderland.geojson
 docker build -t trailr-tiles .
 docker run --rm -v ".:/work" trailr-tiles
 ```
