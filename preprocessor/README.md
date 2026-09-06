@@ -86,17 +86,20 @@ geometries are rebuilt as XYZ.
 
 ## Export GeoJSON for tiles
 
-Export a GDB layer as geometry-only WGS84 GeoJSON, the input for vector tile
-generation (see the `Tiles` workflow):
+Export a line layer as geometry-only WGS84 GeoJSON, the input for vector tile
+generation (see the `Tiles` workflow). Any OGR-readable dataset works (FileGDB,
+GeoPackage, ...); tiles carry no elevation, so a 2D source like the skitouren
+GPKG can be used directly without running `drape` first:
 
 ```bash
-uv run tiles <input_gdb> <layer> <output.geojson>
+uv run tiles <input_dataset> <layer> <output.geojson>
 ```
 
 Example:
 
 ```bash
 uv run tiles data/SWISSTLM3D_WANDERWEGE.gdb TLM_STRASSE data/wanderwege.geojson
+uv run tiles data/skitouren_2056.gpkg/ski_network_2056.gpkg ski_network_2056 data/skitouren.geojson
 ```
 
 ## Generate vector tiles locally with Docker

@@ -9,9 +9,11 @@ logger = logging.getLogger("tiles")
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Export a GDB layer to WGS84 GeoJSON for vector tile generation"
+        description="Export a line layer to WGS84 GeoJSON for vector tile generation"
     )
-    parser.add_argument("dataset", type=Path, help="input GeoDatabase path")
+    parser.add_argument(
+        "dataset", type=Path, help="input dataset path (FileGDB, GeoPackage, ...)"
+    )
     parser.add_argument("layer", type=str, help="layer name")
     parser.add_argument("output", type=Path, help="output GeoJSON path")
     args = parser.parse_args()
