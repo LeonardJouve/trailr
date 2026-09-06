@@ -18,6 +18,7 @@ from preprocessor.drape import (
     plan_batches,
     validate_2d_lines,
     vertex_key,
+    write_output,
 )
 
 
@@ -274,6 +275,35 @@ class DrapeFrameTest(unittest.TestCase):
         self.assertEqual(draped.crs.to_epsg(), 2056)
         self.assertTrue(all(geometry.has_z for geometry in draped.geometry))
         self.assertEqual(draped.geometry.iloc[1].geom_type, "MultiLineString")
+
+
+class WriteOutputTest(unittest.TestCase):
+    def test_int64_columns_survive_gdb_roundtrip(self):
+        # Regression: without TARGET_ARCGIS_VERSION the OpenFileGDB driver
+        # downgrades Integer64 fields to Double, and the graph CSVs then
+        # write "0.0" for `access:int`, failing the Neo4j import.
+        frame = gpd.GeoDataFrame(
+            {
+                "segm_id": [1, 2, 3],
+                "access": [0, 1, 0],
+                "geometry": [
+                    LineString([(2573311.949, 1080362.466, 2661.0), (2573312.0, 1080362.0, 2662.0)]),
+                    LineString([(2573313.0, 1080363.0, 2663.0), (2573314.0, 1080364.0, 2664.0)]),
+                    LineString([(2573315.0, 1080365.0, 2665.0), (2573316.0, 1080366.0, 2666.0)]),
+                ],
+            },
+            crs="EPSG:2056",
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "roundtrip.gdb"
+            write_output(frame, output, "lines")
+            back = gpd.read_file(output, layer="lines", engine="pyogrio")
+
+        self.assertEqual(back["segm_id"].dtype.kind, "i")
+        self.assertEqual(back["access"].dtype.kind, "i")
+        self.assertEqual(list(back["segm_id"]), [1, 2, 3])
+        self.assertEqual(list(back["access"]), [0, 1, 0])
 
 
 if __name__ == "__main__":

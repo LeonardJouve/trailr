@@ -177,6 +177,26 @@ def clear_target(path: Path) -> None:
         path.unlink()
 
 
+# OpenFileGDB stores 64-bit integers only in the newer file format; without
+# this creation option GDAL silently downgrades Integer64 fields to Double,
+# which breaks Neo4j imports of `:int` CSV columns downstream.
+GDB_LAYER_OPTIONS = {"TARGET_ARCGIS_VERSION": "ARCGIS_PRO_3_2_OR_LATER"}
+
+
+def write_output(
+    frame: gpd.GeoDataFrame, output: Path, layer: str
+) -> None:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    clear_target(output)
+    frame.to_file(
+        output,
+        layer=layer,
+        driver="OpenFileGDB",
+        engine="pyogrio",
+        layer_options=GDB_LAYER_OPTIONS,
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Drape a 2D line layer with swissALTI3D elevations via the swisstopo profile API"
@@ -223,14 +243,7 @@ def main():
 
     draped = drape_frame(trails, heights)
 
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    clear_target(args.output)
-    draped.to_file(
-        args.output,
-        layer=args.layer,
-        driver="OpenFileGDB",
-        engine="pyogrio",
-    )
+    write_output(draped, args.output, args.layer)
 
     elevations = list(heights.values())
     logger.info(
