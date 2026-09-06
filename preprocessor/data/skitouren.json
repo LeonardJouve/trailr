@@ -1,5 +1,5 @@
 {
-  "dataset": "skitouren_2056.gpkg/ski_network_2056.gpkg",
+  "dataset": "skitouren.gdb",
   "layer": "ski_network_2056",
   "type": "ski",
   "output_folder": ".",

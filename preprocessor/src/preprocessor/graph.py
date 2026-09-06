@@ -7,7 +7,6 @@ from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
-from shapely import force_3d
 from shapely.geometry import LineString, MultiPoint, Point
 from shapely.ops import snap, split
 from shapely.strtree import STRtree
@@ -65,21 +64,6 @@ def load_config(config_path: Path) -> tuple[Path, Path, str, dict[str, str], str
         config["fields"],
         config["type"],
     )
-
-
-def ensure_3d(trails: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-    # Scalar force_3d fills missing z with 0 and leaves existing z untouched,
-    # so this is a no-op for datasets that are fully 3D (all existing GDBs).
-    # Null geometries fail the guard and pass through force_3d (a verified
-    # no-op on None) so validate_input rejects them with a clear error.
-    if all(
-        geometry is not None and geometry.has_z for geometry in trails.geometry
-    ):
-        return trails
-
-    trails = trails.copy()
-    trails["geometry"] = trails.geometry.apply(lambda geometry: force_3d(geometry, z=0))
-    return trails
 
 
 def validate_input(trails: gpd.GeoDataFrame, fields: dict[str, str], graph_type: str) -> None:
@@ -332,7 +316,6 @@ def main():
         layer=layer,
         engine="pyogrio",
     )
-    trails = ensure_3d(trails)
     validate_input(trails, fields, graph_type)
     trails: gpd.GeoDataFrame = trails.reset_index().rename(
         columns={"index": "feature_id"}

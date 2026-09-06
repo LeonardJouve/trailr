@@ -14,6 +14,19 @@ docker compose run --rm neo4j neo4j-admin database import full neo4j --nodes=Nod
 
 docker compose up -d
 
+## Regenerate graph CSVs
+
+The `Preprocess` workflow builds the node/edge CSVs imported above. To
+regenerate them locally, run the graph command per layer from
+`preprocessor/` (e.g. `uv run graph data/swiss3d.json`). The skitouren
+source is 2D, so it must be draped with swissALTI3D elevations once first
+(writes `data/skitouren.gdb`, needs network access, several minutes):
+
+```sh
+uv run drape data/skitouren_2056.gpkg/ski_network_2056.gpkg ski_network_2056 data/skitouren.gdb
+uv run graph data/skitouren.json
+```
+
 [Helm chart documentation](helm/trailr/README.md)
 
 ## Trail map tiles

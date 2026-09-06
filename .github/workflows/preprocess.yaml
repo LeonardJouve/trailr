@@ -102,9 +102,10 @@ jobs:
 
       - name: Run skitouren preprocessor
         run: |
+          uv run drape data/skitouren_2056.gpkg/ski_network_2056.gpkg ski_network_2056 data/skitouren.gdb
           uv run graph data/skitouren.json
           for suffix in nodes.csv nodes.gdb edges.csv edges.gdb; do
-            mv "data/ski_network_2056_${suffix}" "output/skitouren_${suffix}"
+            mv "data/skitouren_${suffix}" "output/skitouren_${suffix}"
           done
 
       - name: Upload output
