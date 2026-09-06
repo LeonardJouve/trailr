@@ -8,5 +8,6 @@ object MapLayers {
         TourType.HIKING -> "swisstlm3d-wanderwege"
         TourType.BIKE -> "veloland"
         TourType.RUNNING -> "wanderland"
+        TourType.SKI -> "skitouren"
     }
 }
