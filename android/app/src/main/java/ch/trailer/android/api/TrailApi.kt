@@ -13,4 +13,7 @@ interface TrailApi {
 
     @POST("bike-tour")
     suspend fun findBikeTour(@Body request: TrailRequest): TrailResponse
+
+    @POST("run-tour")
+    suspend fun findRunTour(@Body request: TrailRequest): TrailResponse
 }

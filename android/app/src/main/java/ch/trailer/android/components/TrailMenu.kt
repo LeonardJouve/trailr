@@ -117,7 +117,7 @@ fun TrailMenu(
                 }
             ) {
                 Text(
-                    if (selectedType == TourType.BIKE) "Find bike tour" else "Find hike"
+                    "Find ${selectedType.label.lowercase()}"
                 )
             }
 
