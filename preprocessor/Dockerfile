@@ -12,4 +12,4 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /usr/local/bin/ /usr/local/bin/
 WORKDIR /work
-CMD ["tippecanoe", "-e", "data/tiles", "-Z8", "-z15", "--force", "-L", "{\"file\":\"data/wanderwege.geojson\",\"layer\":\"wanderwege\"}", "-L", "{\"file\":\"data/veloland.geojson\",\"layer\":\"veloland\"}", "-L", "{\"file\":\"data/wanderland.geojson\",\"layer\":\"wanderland\"}"]
+CMD ["tippecanoe", "-e", "data/tiles", "-Z8", "-z15", "--force", "-L", "{\"file\":\"data/wanderwege.geojson\",\"layer\":\"wanderwege\"}", "-L", "{\"file\":\"data/veloland.geojson\",\"layer\":\"veloland\"}", "-L", "{\"file\":\"data/wanderland.geojson\",\"layer\":\"wanderland\"}", "-L", "{\"file\":\"data/skitouren.geojson\",\"layer\":\"skitouren\"}"]

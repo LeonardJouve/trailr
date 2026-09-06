@@ -92,4 +92,4 @@ docker run --rm -v ".:/work" trailr-tiles
 ```
 
 The container runs the same tippecanoe invocation as the workflow
-(`-e data/tiles -Z8 -z15 --force` with the `wanderwege`, `veloland` and `wanderland` layers): it reads `wanderwege.geojson`, `veloland.geojson` and `wanderland.geojson` from `data/` and writes the `z/x/y.pbf` tile tree to `data/tiles/`.
+(`-e data/tiles -Z8 -z15 --force` with the `wanderwege`, `veloland`, `wanderland` and `skitouren` layers): it reads `wanderwege.geojson`, `veloland.geojson`, `wanderland.geojson` and `skitouren.geojson` from `data/` and writes the `z/x/y.pbf` tile tree to `data/tiles/`.

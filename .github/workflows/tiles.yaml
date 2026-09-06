@@ -74,11 +74,23 @@ jobs:
           bsdtar -xf data/wanderland.gdb.zip -C data/wanderland/
           mv data/wanderland/*.gdb data/wanderland.gdb
 
+      - name: Download skitouren dataset
+        run: |
+          wget \
+            -O data/skitouren.gpkg.zip \
+            "https://data.geo.admin.ch/ch.swisstopo-karto.skitouren/skitouren/skitouren_2056.gpkg.zip"
+
+      - name: Extract skitouren GPKG
+        run: |
+          mkdir -p data/skitouren_2056.gpkg
+          bsdtar -xf data/skitouren.gpkg.zip -C data/skitouren_2056.gpkg/
+
       - name: Export GeoJSON
         run: |
           uv run tiles data/SWISSTLM3D_WANDERWEGE.gdb TLM_STRASSE output/wanderwege.geojson
           uv run tiles data/veloland.gdb VeloWeg output/veloland.geojson
           uv run tiles data/wanderland.gdb WanderWeg output/wanderland.geojson
+          uv run tiles data/skitouren_2056.gpkg/ski_network_2056.gpkg ski_network_2056 output/skitouren.geojson
 
       - name: Generate vector tiles
         run: |
@@ -88,7 +100,8 @@ jobs:
             --force \
             -L '{"file":"output/wanderwege.geojson","layer":"wanderwege"}' \
             -L '{"file":"output/veloland.geojson","layer":"veloland"}' \
-            -L '{"file":"output/wanderland.geojson","layer":"wanderland"}'
+            -L '{"file":"output/wanderland.geojson","layer":"wanderland"}' \
+            -L '{"file":"output/skitouren.geojson","layer":"skitouren"}'
 
       - name: Upload tiles artifact
         uses: actions/upload-artifact@v4
