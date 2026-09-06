@@ -21,6 +21,7 @@ type GraphType struct {
 var (
 	GraphTypeTrail = GraphType{"trail"}
 	GraphTypeBike  = GraphType{"bike"}
+	GraphTypeRun   = GraphType{"run"}
 )
 
 func (g GraphType) String() string {

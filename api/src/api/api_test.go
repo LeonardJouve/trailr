@@ -101,6 +101,20 @@ func TestMissingTileReturnsNotFound(t *testing.T) {
 	}
 }
 
+func TestRunTourRouteRegistered(t *testing.T) {
+	server := newServer(t.TempDir())
+
+	request := httptest.NewRequest(http.MethodPost, "/run-tour", strings.NewReader("{}"))
+	request.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+
+	server.ServeHTTP(recorder, request)
+
+	if recorder.Code == http.StatusNotFound {
+		t.Fatalf("POST /run-tour is not registered")
+	}
+}
+
 func TestStyleServed(t *testing.T) {
 	server := newServer(t.TempDir())
 
