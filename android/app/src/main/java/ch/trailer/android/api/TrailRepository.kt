@@ -14,6 +14,7 @@ class TrailRepository(private val api: TrailApi, private val dao: TrailDao) {
             TourType.HIKING -> api.findHikingTour(request)
             TourType.BIKE -> api.findBikeTour(request)
             TourType.RUNNING -> api.findRunTour(request)
+            TourType.MOUNTAIN_BIKE -> api.findMtbTour(request)
         }
     }
 
