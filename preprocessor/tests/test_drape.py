@@ -1,12 +1,19 @@
+import json
+import tempfile
 import unittest
+from pathlib import Path
+from types import SimpleNamespace
+from unittest import mock
 
 import geopandas as gpd
 from shapely.geometry import LineString, MultiLineString
 
 from preprocessor.drape import (
+    clear_target,
     collect_unique_vertices,
     drape_frame,
     drape_geometry,
+    fetch_batch,
     match_heights,
     plan_batches,
     validate_2d_lines,
@@ -150,6 +157,65 @@ class Validate2dLinesTest(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             validate_2d_lines(trails)
+
+    def test_rejects_nan_geometry_entry_with_value_error(self):
+        frame = SimpleNamespace(
+            geometry=[LineString([(0, 0), (1, 1)]), float("nan")]
+        )
+
+        with self.assertRaises(ValueError):
+            validate_2d_lines(frame)
+
+
+class FetchBatchRetryTest(unittest.TestCase):
+    def test_malformed_json_response_is_retried_then_raised(self):
+        class StubResponse:
+            def read(self):
+                return b'{"alts": truncated'
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+        calls = []
+
+        def stub_urlopen(request, timeout=None):
+            calls.append(request)
+            return StubResponse()
+
+        with mock.patch(
+            "preprocessor.drape.urllib.request.urlopen", stub_urlopen
+        ), mock.patch("preprocessor.drape.time.sleep"):
+            with self.assertRaises(RuntimeError):
+                fetch_batch([(2600000.0, 1200000.0)])
+
+        self.assertEqual(len(calls), 4)
+
+
+class ClearTargetTest(unittest.TestCase):
+    def test_removes_existing_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "out.gdb"
+            (target / "sub").mkdir(parents=True)
+
+            clear_target(target)
+
+            self.assertFalse(target.exists())
+
+    def test_removes_existing_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "out.gdb"
+            target.write_bytes(b"not a gdb")
+
+            clear_target(target)
+
+            self.assertFalse(target.exists())
+
+    def test_missing_target_is_noop(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            clear_target(Path(tmp) / "absent.gdb")
 
 
 class DrapeGeometryTest(unittest.TestCase):

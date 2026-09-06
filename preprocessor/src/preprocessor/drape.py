@@ -31,6 +31,7 @@ def vertex_key(x: float, y: float) -> tuple[float, float]:
 def validate_2d_lines(trails: gpd.GeoDataFrame) -> None:
     if any(
         geometry is None
+        or not hasattr(geometry, "geom_type")
         or geometry.geom_type not in {"LineString", "MultiLineString"}
         or geometry.has_z
         for geometry in trails.geometry
@@ -127,7 +128,13 @@ def fetch_batch(batch: list[tuple[float, float]]) -> list[dict]:
             )
             with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT) as response:
                 return json.loads(response.read().decode("utf-8"))
-        except (urllib.error.URLError, TimeoutError, OSError) as error:
+        except (
+            urllib.error.URLError,
+            TimeoutError,
+            OSError,
+            UnicodeDecodeError,
+            json.JSONDecodeError,
+        ) as error:
             if attempt == MAX_RETRIES:
                 raise RuntimeError(
                     f"profile request failed after {MAX_RETRIES + 1} attempts: {error}"
@@ -161,6 +168,13 @@ def drape_frame(
     draped = trails.copy()
     draped["geometry"] = [drape_geometry(geometry, height_map) for geometry in trails.geometry]
     return draped
+
+
+def clear_target(path: Path) -> None:
+    if path.is_dir():
+        shutil.rmtree(path)
+    elif path.exists():
+        path.unlink()
 
 
 def main():
@@ -210,8 +224,7 @@ def main():
     draped = drape_frame(trails, heights)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    if args.output.exists():
-        shutil.rmtree(args.output)
+    clear_target(args.output)
     draped.to_file(
         args.output,
         layer=args.layer,
