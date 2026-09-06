@@ -45,6 +45,19 @@
         "line-color": "#2196F3",
         "line-width": 2
       }
+    },
+    {
+      "id": "wanderland",
+      "type": "line",
+      "source": "trails",
+      "source-layer": "wanderland",
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "line-color": "#2196F3",
+        "line-width": 2
+      }
     }
   ]
 }
