@@ -1,6 +1,7 @@
 package ch.trailer.android.components
 
 import android.annotation.SuppressLint
+import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,6 +42,7 @@ import ch.trailer.android.api.TourType
 import ch.trailer.android.database.TrailEntity
 import ch.trailer.android.domain.Basemap
 import ch.trailer.android.domain.MapLayers
+import ch.trailer.android.domain.SettingsStore
 import ch.trailer.android.domain.parseElevationProfile
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -87,12 +89,21 @@ fun TrailMap(
         mutableStateOf<MapView?>(null)
     }
 
+    val settings = remember {
+        SettingsStore(context.getSharedPreferences(SettingsStore.FILE_NAME, Context.MODE_PRIVATE))
+    }
+
     var trailLayer by remember {
-        mutableStateOf(TourType.HIKING)
+        mutableStateOf(settings.sport)
     }
 
     var basemap by remember {
-        mutableStateOf(Basemap.SATELLITE)
+        mutableStateOf(settings.basemap)
+    }
+
+    LaunchedEffect(basemap, trailLayer) {
+        settings.basemap = basemap
+        settings.sport = trailLayer
     }
 
     LaunchedEffect(selectedTrail?.id) {
