@@ -63,6 +63,8 @@ import org.maplibre.geojson.Point
 @SuppressLint("MissingPermission")
 @Composable
 fun TrailMap(
+    tourLayer: TourType,
+    onTourLayerChange: (TourType) -> Unit,
     modifier: Modifier = Modifier,
     selectedTrail: TrailEntity? = null,
     isLoading: Boolean = false,
@@ -93,17 +95,12 @@ fun TrailMap(
         SettingsStore(context.getSharedPreferences(SettingsStore.FILE_NAME, Context.MODE_PRIVATE))
     }
 
-    var trailLayer by remember {
-        mutableStateOf(settings.sport)
-    }
-
     var basemap by remember {
         mutableStateOf(settings.basemap)
     }
 
-    LaunchedEffect(basemap, trailLayer) {
+    LaunchedEffect(basemap) {
         settings.basemap = basemap
-        settings.sport = trailLayer
     }
 
     LaunchedEffect(selectedTrail?.id) {
@@ -240,7 +237,7 @@ fun TrailMap(
                         TourType.entries.forEach { type ->
                             style.getLayer(MapLayers.overlayLayerId(type))?.setProperties(
                                 PropertyFactory.visibility(
-                                    if (type == trailLayer) Property.VISIBLE else Property.NONE
+                                    if (type == tourLayer) Property.VISIBLE else Property.NONE
                                 )
                             )
                         }
@@ -316,8 +313,8 @@ fun TrailMap(
             )
 
             LayerPicker(
-                sport = trailLayer,
-                onSportChange = { trailLayer = it },
+                sport = tourLayer,
+                onSportChange = onTourLayerChange,
                 basemap = basemap,
                 onBasemapChange = { basemap = it },
                 modifier = Modifier
@@ -438,6 +435,8 @@ fun TrailMap(
 
         selectedPoint?.let {
             TrailMenu(
+                sport = tourLayer,
+                onSportChange = onTourLayerChange,
                 onDismiss = {
                     selectedPoint = null
                 },

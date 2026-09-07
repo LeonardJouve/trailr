@@ -14,7 +14,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -24,18 +23,14 @@ import ch.trailer.android.api.TourType
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrailMenu(
+    sport: TourType,
+    onSportChange: (TourType) -> Unit,
     onFindTrail: (type: TourType, length: UInt, elevation: UInt) -> Unit,
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss
     ) {
-        val tourTypes = TourType.entries
-
-        var selectedType by remember {
-            mutableStateOf(TourType.HIKING)
-        }
-
         var targetLength by remember {
             mutableFloatStateOf(10_000f)
         }
@@ -93,11 +88,11 @@ fun TrailMenu(
             Button(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
-                    onFindTrail(selectedType, targetLength.toUInt(), targetElevation.toUInt())
+                    onFindTrail(sport, targetLength.toUInt(), targetElevation.toUInt())
                 }
             ) {
                 Text(
-                    "Find ${selectedType.label.lowercase()}"
+                    "Find ${sport.label.lowercase()}"
                 )
             }
 

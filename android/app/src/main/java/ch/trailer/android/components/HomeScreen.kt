@@ -1,6 +1,7 @@
 package ch.trailer.android.components
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Environment
@@ -28,6 +29,7 @@ import ch.trailer.android.Screen
 import ch.trailer.android.SelectedPoint
 import ch.trailer.android.api.TourType
 import ch.trailer.android.database.TrailEntity
+import ch.trailer.android.domain.SettingsStore
 import ch.trailer.android.util.GpxExporter
 import ch.trailer.android.viewmodel.TrailUiState
 import kotlinx.coroutines.launch
@@ -43,6 +45,20 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    val settings = remember {
+        SettingsStore(context.getSharedPreferences(SettingsStore.FILE_NAME, Context.MODE_PRIVATE))
+    }
+
+    var tourLayer by remember {
+        mutableStateOf(settings.sport)
+    }
+
+    // write-through: no LaunchedEffect frame that process death could drop
+    val selectTourLayer: (TourType) -> Unit = {
+        tourLayer = it
+        settings.sport = it
+    }
 
     val downloadTrail: (TrailEntity) -> Unit = { trail ->
         scope.launch {
@@ -168,6 +184,7 @@ fun HomeScreen(
                 trails = state.savedTrails,
                 onTrailClick = { trail ->
                     onSelectTrail(trail)
+                    selectTourLayer(trail.tourType)
                     navController.navigate(Screen.Map.route)
                 },
                 onTrailDownload = { trail ->
@@ -188,6 +205,8 @@ fun HomeScreen(
         composable(Screen.Map.route) {
             if (hasLocationPermission) {
                 TrailMap(
+                    tourLayer = tourLayer,
+                    onTourLayerChange = selectTourLayer,
                     onOpenList = {
                         onClearTrail()
                         navController.navigate(Screen.Trails.route)
