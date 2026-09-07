@@ -5,7 +5,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [TrailEntity::class],
-    version = 1
+    version = 2
 )
 abstract class TrailDatabase : RoomDatabase() {
     abstract fun trailDao(): TrailDao

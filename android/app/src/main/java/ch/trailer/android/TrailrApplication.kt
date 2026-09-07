@@ -11,7 +11,7 @@ class TrailrApplication : Application() {
             this,
             TrailDatabase::class.java,
             "trails.db"
-        ).build()
+        ).fallbackToDestructiveMigration().build()
     }
 
     override fun onCreate() {

@@ -83,6 +83,7 @@ class TrailViewModel(
                 val trailEntity = TrailEntity(
                     id = trailId,
                     name = "${type.label} from ${"%.4f".format(java.util.Locale.US, point.latitude)} , ${"%.4f".format(java.util.Locale.US, point.longitude)}",
+                    tourType = type,
                     length = result.length,
                     elevation = result.elevation,
                     latitude = start[1],
