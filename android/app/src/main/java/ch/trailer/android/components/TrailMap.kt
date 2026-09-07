@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -71,6 +72,7 @@ fun TrailMap(
     onOpenList: () -> Unit,
     onClearTrail: () -> Unit,
     onDownloadTrail: () -> Unit,
+    onGotoTrail: () -> Unit,
     onFindTrail: (point: SelectedPoint, type: TourType, length: UInt, elevation: UInt) -> Unit,
 ) {
     val context = LocalContext.current
@@ -375,13 +377,23 @@ fun TrailMap(
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier
                                     .align(Alignment.CenterStart)
-                                    .padding(end = 80.dp)
+                                    .padding(end = 112.dp)
                             )
 
                             Row(
                                 modifier = Modifier.align(Alignment.TopEnd),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                Icon(
+                                    imageVector = Icons.Default.Navigation,
+                                    contentDescription = "Goto trail start",
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clickable { onGotoTrail() }
+                                )
+
+                                Spacer(modifier = Modifier.size(8.dp))
+
                                 Icon(
                                     imageVector = Icons.Default.Download,
                                     contentDescription = "Download GPX",

@@ -1,9 +1,11 @@
 package ch.trailer.android.components
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Environment
 import android.provider.DocumentsContract
 import android.widget.Toast
@@ -30,6 +32,7 @@ import ch.trailer.android.SelectedPoint
 import ch.trailer.android.api.TourType
 import ch.trailer.android.database.TrailEntity
 import ch.trailer.android.domain.SettingsStore
+import ch.trailer.android.util.GotoTrail
 import ch.trailer.android.util.GpxExporter
 import ch.trailer.android.viewmodel.TrailUiState
 import kotlinx.coroutines.launch
@@ -77,6 +80,24 @@ fun HomeScreen(
                         Toast.LENGTH_LONG
                     ).show()
                 }
+        }
+    }
+
+    val gotoTrail: (TrailEntity) -> Unit = { trail ->
+        val intent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse(GotoTrail.geoUri(trail.latitude, trail.longitude, trail.name))
+        ).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        try {
+            context.startActivity(intent)
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(
+                context,
+                "No map app found to show the trail start",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
@@ -224,6 +245,9 @@ fun HomeScreen(
                     },
                     onDownloadTrail = {
                         state.selectedTrail?.let { downloadTrail(it) }
+                    },
+                    onGotoTrail = {
+                        state.selectedTrail?.let { gotoTrail(it) }
                     },
                     selectedTrail = state.selectedTrail,
                     isLoading = state.isLoading,
