@@ -311,7 +311,7 @@ fun TrailMap(
                 onBasemapChange = { basemap = it },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(16.dp)
+                    .padding(top = 24.dp, end = 16.dp)
             )
 
             androidx.compose.material3.FloatingActionButton(

@@ -1,6 +1,7 @@
 package ch.trailer.android.components
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,7 +26,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -43,11 +46,14 @@ fun LayerPicker(
     modifier: Modifier = Modifier,
 ) {
     var showSheet by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(16.dp)
 
     Box(
         modifier = modifier
             .size(56.dp)
-            .shadow(6.dp, RoundedCornerShape(16.dp))
+            .shadow(10.dp, shape, clip = false)
+            .clip(shape)
+            .border(1.5.dp, Color.White.copy(alpha = 0.8f), shape)
             .clickable { showSheet = true },
         contentAlignment = Alignment.Center
     ) {
