@@ -9,9 +9,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -59,24 +56,7 @@ fun TrailMenu(
 
             Spacer(Modifier.height(24.dp))
 
-            SingleChoiceSegmentedButtonRow(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                tourTypes.forEachIndexed { index, type ->
-                    SegmentedButton(
-                        selected = selectedType == type,
-                        onClick = {
-                            selectedType = type
-                        },
-                        shape = SegmentedButtonDefaults.itemShape(
-                            index = index,
-                            count = tourTypes.size
-                        )
-                    ) {
-                        Text(type.label)
-                    }
-                }
-            }
+            SportDropdown(sport = sport, onSportChange = onSportChange)
 
             Spacer(Modifier.height(24.dp))
 
