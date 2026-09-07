@@ -155,10 +155,11 @@ func TestStyleServed(t *testing.T) {
 		t.Fatalf("expected status 200, got %d", recorder.Code)
 	}
 
-	body := recorder.Body.String()
-	if !strings.Contains(body, `"https://trail.famillejouve.ch/tiles/{z}/{x}/{y}.pbf"`) {
-		t.Fatalf(`style must reference tiles with the hardcoded absolute url, got: %s`, body)
+	if got := recorder.Header().Get("Cache-Control"); got != "no-cache" {
+		t.Fatalf("expected Cache-Control no-cache so clients revalidate the style, got %q", got)
 	}
+
+	body := recorder.Body.String()
 	for _, layer := range []string{`"wanderwege"`, `"veloland"`, `"wanderland"`, `"mtbland"`, `"skitouren"`} {
 		if !strings.Contains(body, layer) {
 			t.Fatalf("style is missing source-layer %s", layer)

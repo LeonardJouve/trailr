@@ -30,6 +30,7 @@ func serveStyle(c *echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "failed to read style")
 	}
 
+	c.Response().Header().Set("Cache-Control", "no-cache")
 	return c.Blob(http.StatusOK, "application/json", style)
 }
 
