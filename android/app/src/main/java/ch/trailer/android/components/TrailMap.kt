@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.shadow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Close
@@ -314,14 +314,16 @@ fun TrailMap(
                     .padding(top = 24.dp, end = 16.dp)
             )
 
+            val fabShape = RoundedCornerShape(16.dp)
             androidx.compose.material3.FloatingActionButton(
                 onClick = onOpenList,
-                containerColor = Color(0xFF2196F3),
-                contentColor = Color.White,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = 60.dp),
-                shape = CircleShape
+                    .padding(end = 16.dp, bottom = 60.dp)
+                    .shadow(10.dp, fabShape, clip = false),
+                shape = fabShape
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.List,
