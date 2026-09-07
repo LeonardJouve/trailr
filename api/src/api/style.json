@@ -8,6 +8,14 @@
       ],
       "tileSize": 256
     },
+    "topo": {
+      "type": "raster",
+      "tiles": [
+        "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissalti3d-reliefschattierung/default/current/3857/{z}/{x}/{y}.png"
+      ],
+      "tileSize": 256,
+      "maxzoom": 18
+    },
     "trails": {
       "type": "vector",
       "tiles": [
@@ -22,6 +30,14 @@
       "id": "satellite",
       "type": "raster",
       "source": "satellite"
+    },
+    {
+      "id": "topo",
+      "type": "raster",
+      "source": "topo",
+      "layout": {
+        "visibility": "none"
+      }
     },
     {
       "id": "swisstlm3d-wanderwege",

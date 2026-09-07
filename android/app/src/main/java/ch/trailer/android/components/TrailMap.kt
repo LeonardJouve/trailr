@@ -21,9 +21,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,6 +39,7 @@ import ch.trailer.android.SelectedPoint
 import ch.trailer.android.api.NetworkModule
 import ch.trailer.android.api.TourType
 import ch.trailer.android.database.TrailEntity
+import ch.trailer.android.domain.Basemap
 import ch.trailer.android.domain.MapLayers
 import ch.trailer.android.domain.parseElevationProfile
 import org.maplibre.android.camera.CameraPosition
@@ -91,6 +89,10 @@ fun TrailMap(
 
     var trailLayer by remember {
         mutableStateOf(TourType.HIKING)
+    }
+
+    var basemap by remember {
+        mutableStateOf(Basemap.SATELLITE)
     }
 
     LaunchedEffect(selectedTrail?.id) {
@@ -232,6 +234,14 @@ fun TrailMap(
                             )
                         }
 
+                        Basemap.entries.forEach { bm ->
+                            style.getLayer(MapLayers.basemapLayerId(bm))?.setProperties(
+                                PropertyFactory.visibility(
+                                    if (bm == basemap) Property.VISIBLE else Property.NONE
+                                )
+                            )
+                        }
+
                         val selectedPointSource = map.style
                             ?.getSourceAs<GeoJsonSource>("selected-point")
                             ?: return@getMapAsync
@@ -294,23 +304,15 @@ fun TrailMap(
                 }
             )
 
-            SingleChoiceSegmentedButtonRow(
+            LayerPicker(
+                sport = trailLayer,
+                onSportChange = { trailLayer = it },
+                basemap = basemap,
+                onBasemapChange = { basemap = it },
                 modifier = Modifier
-                    .align(Alignment.TopStart)
+                    .align(Alignment.TopEnd)
                     .padding(16.dp)
-            ) {
-                TourType.entries.forEachIndexed { index, type ->
-                    SegmentedButton(
-                        selected = trailLayer == type,
-                        onClick = { trailLayer = type },
-                        shape = SegmentedButtonDefaults.itemShape(
-                            index = index,
-                            count = TourType.entries.size
-                        ),
-                        label = { Text(type.label) }
-                    )
-                }
-            }
+            )
 
             androidx.compose.material3.FloatingActionButton(
                 onClick = onOpenList,
