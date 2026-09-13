@@ -3,7 +3,8 @@ ch.astra.veloland ch.astra.mountainbikeland
 ch.swisstopo-karto.skitouren ch.swisstopo.unterkuenfte-winter
 
 tour, straight
-city names
+city names (swissnames3d)
+level curves (alti3d)
 save latest distance / elevation for each sport
 draw tour
 
