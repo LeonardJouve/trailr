@@ -2,8 +2,10 @@ ch.astra.wanderland
 ch.astra.veloland ch.astra.mountainbikeland
 ch.swisstopo-karto.skitouren ch.swisstopo.unterkuenfte-winter
 
-layer picker
 tour, straight
+city names
+save latest distance / elevation for each sport
+draw tour
 
 docker compose up
 
