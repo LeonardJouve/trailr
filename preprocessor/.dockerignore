@@ -1,2 +1,5 @@
 *
 !data/*.geojson
+!src/
+!src/preprocessor/
+!src/preprocessor/contours.py

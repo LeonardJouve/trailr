@@ -1,0 +1,27 @@
+FROM ubuntu:24.04 AS tippecanoe
+ARG TIPPECANOE_REF=68ab8dcc229f95b8b25877697d5e8d66783af503
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates git make g++ libsqlite3-dev zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+RUN git init /src/tippecanoe \
+    && git -C /src/tippecanoe remote add origin https://github.com/felt/tippecanoe.git \
+    && git -C /src/tippecanoe fetch --depth 1 origin "$TIPPECANOE_REF" \
+    && git -C /src/tippecanoe checkout --detach FETCH_HEAD \
+    && make -C /src/tippecanoe -j"$(nproc)" \
+    && make -C /src/tippecanoe install
+
+FROM ubuntu:24.04
+ARG GDAL_PACKAGE_VERSION=3.8.4+dfsg-3ubuntu3
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    gdal-bin="$GDAL_PACKAGE_VERSION" \
+    libsqlite3-0 \
+    python3 \
+    zlib1g \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=tippecanoe /usr/local/bin/ /usr/local/bin/
+COPY src/preprocessor/contours.py /app/contours.py
+RUN gdalinfo --version | grep -F "GDAL 3.8.4" \
+    && tippecanoe --version
+WORKDIR /work
+ENTRYPOINT ["python3", "/app/contours.py"]
