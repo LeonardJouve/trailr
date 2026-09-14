@@ -191,3 +191,48 @@ def download_assets(assets: list[Asset], cache_dir: Path, workers: int) -> list[
                 future.cancel()
             raise
     return sorted(results)
+
+
+def minzoom_for(elevation: int) -> int:
+    if elevation % 100 == 0:
+        return 8
+    if elevation % 50 == 0:
+        return 11
+    if elevation % 20 == 0:
+        return 13
+    return 15
+
+
+def annotate_contours(source: Path, target: Path) -> int:
+    count = 0
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with (
+        source.open(encoding="utf-8") as input_file,
+        target.open("w", encoding="utf-8", newline="\n") as output_file,
+    ):
+        for line_number, line in enumerate(input_file, start=1):
+            if not line.strip():
+                continue
+            feature = json.loads(line)
+            if not isinstance(feature, dict):
+                raise ValueError(f"feature {line_number} is not an object")
+            properties = feature.get("properties")
+            if not isinstance(properties, dict):
+                raise ValueError(f"feature {line_number} lacks properties")
+            raw_elevation = properties.get("elevation")
+            if not isinstance(raw_elevation, int | float):
+                raise ValueError(f"feature {line_number} lacks numeric elevation")
+            elevation = round(raw_elevation)
+            if abs(raw_elevation - elevation) > 1e-6 or elevation % 10 != 0:
+                raise ValueError(
+                    f"feature {line_number} elevation is not a 10 m multiple"
+                )
+
+            feature["properties"] = {"elevation": elevation}
+            feature["tippecanoe"] = {"minzoom": minzoom_for(elevation)}
+            output_file.write(json.dumps(feature, separators=(",", ":")) + "\n")
+            count += 1
+
+    if count == 0:
+        raise ValueError("GDAL produced no contours")
+    return count

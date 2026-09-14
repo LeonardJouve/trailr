@@ -6,9 +6,11 @@ from pathlib import Path
 
 from preprocessor.contours import (
     Asset,
+    annotate_contours,
     discover_assets,
     download_asset,
     download_assets,
+    minzoom_for,
     sha256_from_multihash,
     write_manifest,
 )
@@ -181,3 +183,72 @@ class DownloadTest(unittest.TestCase):
             self.assertRaisesRegex(ValueError, "workers must be positive"),
         ):
             download_assets([], Path(tmp), workers=0)
+
+
+class AnnotationTest(unittest.TestCase):
+    def test_assigns_required_minimum_zoom(self):
+        expected = {
+            100: 8,
+            150: 11,
+            20: 13,
+            40: 13,
+            10: 15,
+            30: 15,
+        }
+        self.assertEqual(
+            {elevation: minzoom_for(elevation) for elevation in expected},
+            expected,
+        )
+
+    def test_keeps_only_integer_elevation_and_adds_tippecanoe_metadata(self):
+        features = [
+            {
+                "type": "Feature",
+                "properties": {"ID": 1, "elevation": 50.0},
+                "geometry": {
+                    "type": "LineString",
+                    "coordinates": [[7.0, 46.0], [7.1, 46.1]],
+                },
+            },
+            {
+                "type": "Feature",
+                "properties": {"ID": 2, "elevation": 20.0},
+                "geometry": {
+                    "type": "LineString",
+                    "coordinates": [[7.2, 46.2], [7.3, 46.3]],
+                },
+            },
+        ]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "raw.geojsonl"
+            target = Path(tmp) / "contours.geojsonl"
+            source.write_text(
+                "\n".join(json.dumps(feature) for feature in features) + "\n",
+                encoding="utf-8",
+            )
+
+            count = annotate_contours(source, target)
+            actual = [json.loads(line) for line in target.read_text().splitlines()]
+
+        self.assertEqual(count, 2)
+        self.assertEqual(actual[0]["properties"], {"elevation": 50})
+        self.assertEqual(actual[0]["tippecanoe"], {"minzoom": 11})
+        self.assertEqual(actual[1]["properties"], {"elevation": 20})
+        self.assertEqual(actual[1]["tippecanoe"], {"minzoom": 13})
+        self.assertEqual(actual[0]["geometry"], features[0]["geometry"])
+
+    def test_rejects_non_10m_elevation(self):
+        feature = {
+            "type": "Feature",
+            "properties": {"elevation": 15.0},
+            "geometry": {"type": "LineString", "coordinates": []},
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "raw.geojsonl"
+            target = Path(tmp) / "contours.geojsonl"
+            source.write_text(json.dumps(feature) + "\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "10 m multiple"):
+                annotate_contours(source, target)
