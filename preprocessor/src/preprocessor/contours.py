@@ -236,3 +236,174 @@ def annotate_contours(source: Path, target: Path) -> int:
     if count == 0:
         raise ValueError("GDAL produced no contours")
     return count
+
+
+@dataclass(frozen=True)
+class BuildOptions:
+    cache_dir: Path
+    work_dir: Path
+    output_dir: Path
+    workers: int
+    dem: Path | None
+    stac_url: str
+
+
+def parse_args(argv: Sequence[str] | None = None) -> BuildOptions:
+    parser = argparse.ArgumentParser(description="Build swissALTI3D contour tiles")
+    commands = parser.add_subparsers(dest="command", required=True)
+    build_parser = commands.add_parser("build")
+    build_parser.add_argument(
+        "--cache-dir", type=Path, default=Path("data/swissalti3d")
+    )
+    build_parser.add_argument(
+        "--work-dir", type=Path, default=Path("data/contours-work")
+    )
+    build_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("data/tiles/contours"),
+    )
+    build_parser.add_argument("--workers", type=int, default=4)
+    build_parser.add_argument("--dem", type=Path)
+    build_parser.add_argument("--stac-url", default=ITEMS_URL)
+    namespace = parser.parse_args(argv)
+    return BuildOptions(
+        cache_dir=cast(Path, namespace.cache_dir),
+        work_dir=cast(Path, namespace.work_dir),
+        output_dir=cast(Path, namespace.output_dir),
+        workers=cast(int, namespace.workers),
+        dem=cast(Path | None, namespace.dem),
+        stac_url=cast(str, namespace.stac_url),
+    )
+
+
+def build_commands(
+    work_dir: Path,
+    staging_dir: Path,
+) -> tuple[list[str], list[str], list[str]]:
+    vrt = [
+        "gdalbuildvrt",
+        "-strict",
+        "-overwrite",
+        "-input_file_list",
+        str(work_dir / "inputs.txt"),
+        str(work_dir / "dem.vrt"),
+    ]
+    contour = [
+        "gdal_contour",
+        "-q",
+        "-f",
+        "GeoJSONSeq",
+        "-lco",
+        "RS=NO",
+        "-a",
+        "elevation",
+        "-i",
+        "10",
+        "-nln",
+        "contours",
+        str(work_dir / "dem.vrt"),
+        str(work_dir / "raw-contours.geojsonl"),
+    ]
+    tiles = [
+        "tippecanoe",
+        "-P",
+        "--force",
+        "-e",
+        str(staging_dir),
+        "-Z8",
+        "-z15",
+        "-l",
+        "contours",
+        "-y",
+        "elevation",
+        str(work_dir / "contours.geojsonl"),
+    ]
+    return vrt, contour, tiles
+
+
+def replace_output(staging: Path, target: Path) -> None:
+    backup = target.with_name(target.name + ".old")
+    if backup.exists():
+        shutil.rmtree(backup)
+    if target.exists():
+        target.replace(backup)
+    try:
+        staging.replace(target)
+    except BaseException:
+        if backup.exists():
+            backup.replace(target)
+        raise
+    if backup.exists():
+        shutil.rmtree(backup)
+
+
+def run_checked(command: list[str]) -> None:
+    logger.info("running %s", " ".join(command))
+    subprocess.run(command, check=True)
+
+
+def require_tools() -> None:
+    missing = [
+        command
+        for command in ("gdalbuildvrt", "gdal_contour", "tippecanoe")
+        if shutil.which(command) is None
+    ]
+    if missing:
+        raise RuntimeError(f"missing required commands: {', '.join(missing)}")
+
+
+def build(options: BuildOptions) -> None:
+    if options.workers < 1:
+        raise ValueError("workers must be positive")
+    require_tools()
+
+    if options.work_dir.exists():
+        shutil.rmtree(options.work_dir)
+    options.work_dir.mkdir(parents=True)
+    options.output_dir.parent.mkdir(parents=True, exist_ok=True)
+
+    if options.dem is None:
+        assets = discover_assets(options.stac_url)
+        write_manifest(assets, options.cache_dir / "manifest.json")
+        rasters = download_assets(assets, options.cache_dir, options.workers)
+    else:
+        if not options.dem.is_file():
+            raise ValueError(f"DEM does not exist: {options.dem}")
+        rasters = [options.dem]
+
+    input_list = options.work_dir / "inputs.txt"
+    input_list.write_text(
+        "".join(f"{path.resolve()}\n" for path in rasters),
+        encoding="utf-8",
+    )
+
+    staging = options.output_dir.with_name(options.output_dir.name + ".tmp")
+    if staging.exists():
+        shutil.rmtree(staging)
+    vrt_command, contour_command, tiles_command = build_commands(
+        options.work_dir,
+        staging,
+    )
+    run_checked(vrt_command)
+    run_checked(contour_command)
+    annotate_contours(
+        options.work_dir / "raw-contours.geojsonl",
+        options.work_dir / "contours.geojsonl",
+    )
+    run_checked(tiles_command)
+    replace_output(staging, options.output_dir)
+    shutil.rmtree(options.work_dir)
+
+
+def main() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)-8s %(name)s %(message)s",
+        datefmt="%H:%M:%S",
+    )
+    build(parse_args())
+
+
+if __name__ == "__main__":
+    main()

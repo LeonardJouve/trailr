@@ -7,14 +7,16 @@ from pathlib import Path
 from preprocessor.contours import (
     Asset,
     annotate_contours,
+    build_commands,
     discover_assets,
     download_asset,
     download_assets,
     minzoom_for,
+    parse_args,
+    replace_output,
     sha256_from_multihash,
     write_manifest,
 )
-
 
 SHA_A = "a" * 64
 SHA_B = "b" * 64
@@ -252,3 +254,84 @@ class AnnotationTest(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "10 m multiple"):
                 annotate_contours(source, target)
+
+
+class BuildCommandTest(unittest.TestCase):
+    def test_build_commands_preserve_elevation_and_required_zoom_range(self):
+        work = Path("work")
+        staging = Path("tiles.tmp")
+
+        vrt, contour, tiles = build_commands(work, staging)
+
+        self.assertEqual(
+            vrt,
+            [
+                "gdalbuildvrt",
+                "-strict",
+                "-overwrite",
+                "-input_file_list",
+                str(work / "inputs.txt"),
+                str(work / "dem.vrt"),
+            ],
+        )
+        self.assertEqual(
+            contour,
+            [
+                "gdal_contour",
+                "-q",
+                "-f",
+                "GeoJSONSeq",
+                "-lco",
+                "RS=NO",
+                "-a",
+                "elevation",
+                "-i",
+                "10",
+                "-nln",
+                "contours",
+                str(work / "dem.vrt"),
+                str(work / "raw-contours.geojsonl"),
+            ],
+        )
+        self.assertEqual(
+            tiles,
+            [
+                "tippecanoe",
+                "-P",
+                "--force",
+                "-e",
+                str(staging),
+                "-Z8",
+                "-z15",
+                "-l",
+                "contours",
+                "-y",
+                "elevation",
+                str(work / "contours.geojsonl"),
+            ],
+        )
+
+    def test_cli_defaults_and_dem_override(self):
+        options = parse_args(["build", "--dem", "tests/fixtures/dem.asc"])
+
+        self.assertEqual(options.workers, 4)
+        self.assertEqual(options.cache_dir, Path("data/swissalti3d"))
+        self.assertEqual(options.work_dir, Path("data/contours-work"))
+        self.assertEqual(options.output_dir, Path("data/tiles/contours"))
+        self.assertEqual(options.dem, Path("tests/fixtures/dem.asc"))
+
+    def test_replace_output_swaps_complete_tree(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = root / "contours"
+            staging = root / "contours.tmp"
+            target.mkdir()
+            staging.mkdir()
+            (target / "old").write_text("old", encoding="utf-8")
+            (staging / "new").write_text("new", encoding="utf-8")
+
+            replace_output(staging, target)
+
+            self.assertFalse((target / "old").exists())
+            self.assertEqual((target / "new").read_text(encoding="utf-8"), "new")
+            self.assertFalse((root / "contours.old").exists())
