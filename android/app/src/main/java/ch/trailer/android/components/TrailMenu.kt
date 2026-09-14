@@ -24,6 +24,8 @@ import ch.trailer.android.api.TourType
 @Composable
 fun TrailMenu(
     sport: TourType,
+    distanceFor: (TourType) -> Float,
+    elevationFor: (TourType) -> Float,
     onSportChange: (TourType) -> Unit,
     onFindTrail: (type: TourType, length: UInt, elevation: UInt) -> Unit,
     onDismiss: () -> Unit
@@ -31,12 +33,12 @@ fun TrailMenu(
     ModalBottomSheet(
         onDismissRequest = onDismiss
     ) {
-        var targetLength by remember {
-            mutableFloatStateOf(10_000f)
+        var targetLength by remember(sport) {
+            mutableFloatStateOf(distanceFor(sport))
         }
 
-        var targetElevation by remember {
-            mutableFloatStateOf(500f)
+        var targetElevation by remember(sport) {
+            mutableFloatStateOf(elevationFor(sport))
         }
 
         Column(

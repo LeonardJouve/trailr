@@ -46,4 +46,56 @@ class SettingsStoreTest {
             assertEquals(it, SettingsStore.parseTourType(it.name))
         }
     }
+
+    @Test
+    fun `target keys are namespaced by sport`() {
+        assertEquals("distance_HIKING", SettingsStore.distanceKey(TourType.HIKING))
+        assertEquals("elevation_${TourType.MOUNTAIN_BIKE.name}",
+            SettingsStore.elevationKey(TourType.MOUNTAIN_BIKE))
+    }
+
+    @Test
+    fun `targets fall back to defaults when nothing is stored`() {
+        val settings = SettingsStore(FakeSharedPreferences())
+        assertEquals(SettingsStore.DEFAULT_DISTANCE, settings.targetDistance(TourType.BIKE), 0f)
+        assertEquals(SettingsStore.DEFAULT_ELEVATION, settings.targetElevation(TourType.BIKE), 0f)
+    }
+
+    @Test
+    fun `stored targets round-trip per sport`() {
+        val settings = SettingsStore(FakeSharedPreferences())
+        settings.setTargets(TourType.RUNNING, 7_500f, 320f)
+        assertEquals(7_500f, settings.targetDistance(TourType.RUNNING), 0f)
+        assertEquals(320f, settings.targetElevation(TourType.RUNNING), 0f)
+    }
+
+    @Test
+    fun `targets are isolated between sports`() {
+        val settings = SettingsStore(FakeSharedPreferences())
+        settings.setTargets(TourType.HIKING, 12_000f, 900f)
+        assertEquals(12_000f, settings.targetDistance(TourType.HIKING), 0f)
+        assertEquals(SettingsStore.DEFAULT_DISTANCE, settings.targetDistance(TourType.BIKE), 0f)
+        assertEquals(SettingsStore.DEFAULT_ELEVATION, settings.targetElevation(TourType.BIKE), 0f)
+    }
+
+    @Test
+    fun `latest stored target wins for a sport`() {
+        val settings = SettingsStore(FakeSharedPreferences())
+        settings.setTargets(TourType.SKI, 4_000f, 100f)
+        settings.setTargets(TourType.SKI, 6_000f, 250f)
+        assertEquals(6_000f, settings.targetDistance(TourType.SKI), 0f)
+        assertEquals(250f, settings.targetElevation(TourType.SKI), 0f)
+    }
+
+    @Test
+    fun `every sport gets its own target slot`() {
+        val settings = SettingsStore(FakeSharedPreferences())
+        TourType.entries.forEachIndexed { index, sport ->
+            settings.setTargets(sport, 1_000f + index, 100f + index)
+        }
+        TourType.entries.forEachIndexed { index, sport ->
+            assertEquals(1_000f + index, settings.targetDistance(sport), 0f)
+            assertEquals(100f + index, settings.targetElevation(sport), 0f)
+        }
+    }
 }

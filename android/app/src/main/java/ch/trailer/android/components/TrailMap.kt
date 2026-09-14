@@ -463,6 +463,8 @@ fun TrailMap(
         selectedPoint?.let {
             TrailMenu(
                 sport = tourLayer,
+                distanceFor = settings::targetDistance,
+                elevationFor = settings::targetElevation,
                 onSportChange = onTourLayerChange,
                 onDismiss = {
                     selectedPoint = null
@@ -470,6 +472,7 @@ fun TrailMap(
                 onFindTrail = { type, length, elevation ->
                     val point = selectedPoint!!
                     selectedPoint = null
+                    settings.setTargets(type, length.toFloat(), elevation.toFloat())
                     onFindTrail(point, type, length, elevation)
                 }
             )
