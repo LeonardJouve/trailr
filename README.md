@@ -47,6 +47,10 @@ For local development, `docker compose` mounts `preprocessor/data/tiles` into
 the API container. If that directory is empty the API still runs; the app
 simply shows no trail overlay.
 
+Elevation contours are generated separately from swissALTI3D on a local
+machine and written below `preprocessor/data/tiles/contours/`; they are not a
+GitHub release asset. See [the preprocessor instructions](preprocessor/README.md#generate-elevation-contour-tiles-locally).
+
 ### Generate the tiles locally
 
 See `preprocessor/README.md`. First download the skitouren GPKG zip

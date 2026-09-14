@@ -114,3 +114,33 @@ docker run --rm -v ".:/work" trailr-tiles
 ```
 
 The container runs the same tippecanoe invocation as the workflow
+
+## Generate elevation contour tiles locally
+
+The contour build uses all 2 m swissALTI3D COGs (about 44 GB across roughly
+43,500 tiles), so reserve at least 100 GB free. Downloads are SHA-256 verified,
+cached in `data/swissalti3d/`, and reused. Any network or checksum error aborts
+without replacing existing contour tiles.
+
+Build the pinned tool image, then generate the full dataset:
+
+```bash
+docker build -f Dockerfile.contours -t trailr-contours .
+docker run --rm -v ".:/work" trailr-contours build
+```
+
+Output: `data/tiles/contours/{z}/{x}/{y}.pbf`, zooms 8–15. The existing local
+API mount serves it at `/tiles/contours/{z}/{x}/{y}.pbf`.
+
+For a small pipeline check:
+
+```bash
+docker run --rm -v ".:/work" trailr-contours build \
+  --dem tests/fixtures/dem.asc \
+  --output-dir data/tiles/contours-smoke
+```
+
+Use `--workers N` to override four parallel downloads. There are deliberately
+no retries: rerun the command after a failure; verified cached files are kept.
+Contour tiles are copied to the production tiles PVC manually and are never
+uploaded to GitHub.
