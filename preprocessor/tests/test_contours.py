@@ -7,6 +7,8 @@ from pathlib import Path
 from preprocessor.contours import (
     Asset,
     discover_assets,
+    download_asset,
+    download_assets,
     sha256_from_multihash,
     write_manifest,
 )
@@ -126,3 +128,56 @@ class CatalogTest(unittest.TestCase):
                 ],
             },
         )
+
+
+class DownloadTest(unittest.TestCase):
+    def test_valid_cached_file_skips_network(self):
+        payload = b"cached-dem"
+        digest = hashlib.sha256(payload).hexdigest()
+        asset = Asset("item", "tile.tif", "https://invalid.test/tile.tif", digest)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp)
+            target = cache / "tile.tif"
+            target.write_bytes(payload)
+
+            result = download_asset(asset, cache)
+
+        self.assertEqual(result, target)
+
+    def test_corrupt_cached_file_is_atomically_replaced(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source.tif"
+            source.write_bytes(b"correct-dem")
+            digest = hashlib.sha256(source.read_bytes()).hexdigest()
+            asset = Asset("item", "tile.tif", source.as_uri(), digest)
+            cache = root / "cache"
+            cache.mkdir()
+            (cache / "tile.tif").write_bytes(b"corrupt")
+
+            result = download_asset(asset, cache)
+
+            self.assertEqual(result.read_bytes(), b"correct-dem")
+            self.assertFalse((cache / "tile.tif.part").exists())
+
+    def test_checksum_failure_aborts_without_publishing_partial_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "source.tif"
+            source.write_bytes(b"wrong-dem")
+            asset = Asset("item", "tile.tif", source.as_uri(), SHA_A)
+            cache = root / "cache"
+
+            with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+                download_assets([asset], cache, workers=4)
+
+            self.assertFalse((cache / "tile.tif").exists())
+            self.assertFalse((cache / "tile.tif.part").exists())
+
+    def test_rejects_nonpositive_worker_count(self):
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            self.assertRaisesRegex(ValueError, "workers must be positive"),
+        ):
+            download_assets([], Path(tmp), workers=0)

@@ -132,3 +132,62 @@ def write_manifest(assets: list[Asset], path: Path) -> None:
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def download_asset(asset: Asset, cache_dir: Path) -> Path:
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    target = cache_dir / asset.filename
+    if target.is_file() and file_sha256(target) == asset.sha256:
+        logger.info("cached %s", asset.filename)
+        return target
+
+    partial = target.with_suffix(target.suffix + ".part")
+    partial.unlink(missing_ok=True)
+    request = urllib.request.Request(
+        asset.href,
+        headers={"User-Agent": "trailr-contours/1"},
+    )
+    try:
+        with (
+            urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT) as response,
+            partial.open("wb") as output,
+        ):
+            shutil.copyfileobj(response, output, length=1024 * 1024)
+        actual = file_sha256(partial)
+        if actual != asset.sha256:
+            raise ValueError(
+                f"checksum mismatch for {asset.filename}: "
+                f"expected {asset.sha256}, got {actual}"
+            )
+        partial.replace(target)
+    except BaseException:
+        partial.unlink(missing_ok=True)
+        raise
+    return target
+
+
+def download_assets(assets: list[Asset], cache_dir: Path, workers: int) -> list[Path]:
+    if workers < 1:
+        raise ValueError("workers must be positive")
+
+    results: list[Path] = []
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = [
+            executor.submit(download_asset, asset, cache_dir) for asset in assets
+        ]
+        try:
+            for future in as_completed(futures):
+                results.append(future.result())
+        except BaseException:
+            for future in futures:
+                future.cancel()
+            raise
+    return sorted(results)
