@@ -2,6 +2,7 @@ package ch.trailer.android.components
 
 import android.annotation.SuppressLint
 import android.content.Context
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -150,7 +151,7 @@ fun TrailMap(
                                 locationComponent.renderMode = RenderMode.COMPASS
 
                                 map.setMinZoomPreference(8.0)
-                                map.setMaxZoomPreference(20.0)
+                                map.setMaxZoomPreference(17.0)
                                 map.setLatLngBoundsForCameraTarget(
                                     LatLngBounds.Builder()
                                         .include(LatLng(45.50, 5.00))
@@ -312,6 +313,20 @@ fun TrailMap(
                         }
                     }
                 }
+            )
+
+            Text(
+                text = "© swisstopo",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 8.dp, bottom = 34.dp)
+                    .background(
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                        RoundedCornerShape(4.dp)
+                    )
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
             )
 
             LayerPicker(

@@ -10,8 +10,8 @@ import java.util.concurrent.TimeUnit
 object NetworkModule {
     private const val BASE_URL = ch.trailer.android.BuildConfig.API_URL
 
-    // ?v=2 deprecates cache
-    val STYLE_URL: String = BASE_URL + "style.json?v=2"
+    // ?v=3 deprecates cache
+    val STYLE_URL: String = BASE_URL + "style.json?v=3"
 
     private val json = Json {
         ignoreUnknownKeys = true
