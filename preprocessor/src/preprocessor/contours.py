@@ -1,9 +1,12 @@
 import argparse
 import hashlib
+import http.client
 import json
 import logging
+import re
 import shutil
 import subprocess
+import time
 import urllib.request
 from collections.abc import Callable, Sequence
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -18,9 +21,18 @@ ITEMS_URL = (
 )
 REQUEST_TIMEOUT = 120
 COG_MEDIA_TYPE = "image/tiff; application=geotiff; profile=cloud-optimized"
+USER_AGENT = "trailr-contours/1"
+DOWNLOAD_ATTEMPTS = 3
+RETRY_BACKOFF_SECONDS = 2.0
+# The collection holds every swissALTI3D campaign, so a 1 km cell appears once
+# per year it was flown. Contours need exactly one DEM per cell: the newest.
+SELECTION_NEWEST_PER_CELL = "newest_per_cell"
+CELL_PATTERN = re.compile(r"swissalti3d_(\d{4})_(\d{4}-\d{4})")
 
 JsonObject = dict[str, object]
 JsonGetter = Callable[[str], JsonObject]
+BytesGetter = Callable[[str], bytes]
+Sleeper = Callable[[float], None]
 logger = logging.getLogger("contours")
 
 
@@ -46,7 +58,7 @@ def sha256_from_multihash(value: str) -> str:
 def fetch_json(url: str) -> JsonObject:
     request = urllib.request.Request(
         url,
-        headers={"User-Agent": "trailr-contours/1"},
+        headers={"User-Agent": USER_AGENT},
     )
     with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT) as response:
         value = json.loads(response.read().decode("utf-8"))
@@ -123,15 +135,113 @@ def discover_assets(items_url: str, get_json: JsonGetter = fetch_json) -> list[A
     return assets
 
 
+def cell_of(item_id: str) -> tuple[int, str]:
+    match = CELL_PATTERN.fullmatch(item_id)
+    if match is None:
+        raise ValueError(f"unexpected swissALTI3D item id: {item_id!r}")
+    return int(cast(str, match.group(1))), cast(str, match.group(2))
+
+
+def select_assets(assets: Sequence[Asset]) -> list[Asset]:
+    """Keep one COG per 1 km cell: the newest campaign, ties by first seen."""
+    newest: dict[str, tuple[int, Asset]] = {}
+    for asset in sorted(assets, key=lambda value: value.filename):
+        year, cell = cell_of(asset.item_id)
+        if cell not in newest or year > newest[cell][0]:
+            newest[cell] = (year, asset)
+    return [asset for _, asset in sorted(newest.values())]
+
+
 def write_manifest(assets: list[Asset], path: Path) -> None:
     manifest = {
         "collection": COLLECTION_ID,
         "resolution_m": 2,
         "epsg": 2056,
+        "selection": SELECTION_NEWEST_PER_CELL,
         "assets": [asdict(asset) for asset in assets],
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
+
+def load_manifest(path: Path) -> list[Asset] | None:
+    """Return cached assets, or None when the manifest cannot be trusted."""
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        logger.warning("manifest unusable (%s): %s", path, error)
+        return None
+    if not isinstance(raw, dict):
+        logger.warning("manifest is not an object: %s", path)
+        return None
+    manifest = cast(JsonObject, raw)
+    if (
+        manifest.get("collection") != COLLECTION_ID
+        or manifest.get("resolution_m") != 2
+        or manifest.get("epsg") != 2056
+        or manifest.get("selection") != SELECTION_NEWEST_PER_CELL
+    ):
+        logger.info("manifest stale or unpinned: %s", path)
+        return None
+    features = manifest.get("assets")
+    if not isinstance(features, list):
+        logger.warning("manifest has no asset list: %s", path)
+        return None
+    assets: list[Asset] = []
+    for feature in features:
+        if not isinstance(feature, dict):
+            logger.warning("manifest asset is not an object: %s", path)
+            return None
+        item = cast(JsonObject, feature)
+        item_id = item.get("item_id")
+        filename = item.get("filename")
+        href = item.get("href")
+        digest = item.get("sha256")
+        if not all(
+            isinstance(value, str) for value in (item_id, filename, href, digest)
+        ):
+            logger.warning("manifest asset is incomplete: %s", path)
+            return None
+        assets.append(
+            Asset(
+                item_id=cast(str, item_id),
+                filename=cast(str, filename),
+                href=cast(str, href),
+                sha256=cast(str, digest),
+            )
+        )
+    try:
+        return select_assets(assets)
+    except ValueError as error:
+        logger.warning("manifest rejected: %s", error)
+        return None
+
+
+def declared_length(value: str | None) -> int | None:
+    if value is None:
+        return None
+    try:
+        length = int(value)
+    except ValueError:
+        return None
+    return length if length >= 0 else None
+
+
+def fetch_bytes(url: str) -> bytes:
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    try:
+        with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT) as response:
+            expected = declared_length(response.headers.get("Content-Length"))
+            payload = cast(bytes, response.read())
+    except http.client.IncompleteRead as error:
+        # Premature connection close: http.client only reports the byte count it
+        # happened to receive, never the checksum of the partial body.
+        raise ValueError(f"incomplete response from {url}: {error}") from error
+    if expected is not None and len(payload) != expected:
+        raise ValueError(
+            f"truncated response from {url}: got {len(payload)} of {expected} bytes"
+        )
+    return payload
 
 
 def file_sha256(path: Path) -> str:
@@ -142,7 +252,22 @@ def file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def download_asset(asset: Asset, cache_dir: Path) -> Path:
+def download_asset(
+    asset: Asset,
+    cache_dir: Path,
+    *,
+    attempts: int = DOWNLOAD_ATTEMPTS,
+    fetch: BytesGetter = fetch_bytes,
+    sleep: Sleeper = time.sleep,
+) -> Path:
+    """Fetch one COG, verified by SHA-256.
+
+    Short reads (connection reset mid-body) and corrupt cache entries look like
+    a checksum mismatch, so they are retried instead of aborting the build.
+    """
+    if attempts < 1:
+        raise ValueError("attempts must be positive")
+
     cache_dir.mkdir(parents=True, exist_ok=True)
     target = cache_dir / asset.filename
     if target.is_file() and file_sha256(target) == asset.sha256:
@@ -150,38 +275,54 @@ def download_asset(asset: Asset, cache_dir: Path) -> Path:
         return target
 
     partial = target.with_suffix(target.suffix + ".part")
-    partial.unlink(missing_ok=True)
-    request = urllib.request.Request(
-        asset.href,
-        headers={"User-Agent": "trailr-contours/1"},
-    )
-    try:
-        with (
-            urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT) as response,
-            partial.open("wb") as output,
-        ):
-            shutil.copyfileobj(response, output, length=1024 * 1024)
-        actual = file_sha256(partial)
-        if actual != asset.sha256:
-            raise ValueError(
-                f"checksum mismatch for {asset.filename}: "
-                f"expected {asset.sha256}, got {actual}"
-            )
-        partial.replace(target)
-    except BaseException:
+    for attempt in range(1, attempts + 1):
         partial.unlink(missing_ok=True)
-        raise
-    return target
+        try:
+            payload = fetch(asset.href)
+            actual = hashlib.sha256(payload).hexdigest()
+            if actual != asset.sha256:
+                raise ValueError(
+                    f"checksum mismatch for {asset.filename}: "
+                    f"expected {asset.sha256}, got {actual}"
+                )
+            partial.write_bytes(payload)
+            partial.replace(target)
+            return target
+        except (OSError, ValueError) as error:
+            partial.unlink(missing_ok=True)
+            if attempt == attempts:
+                raise
+            logger.warning(
+                "retry %d/%d for %s: %s", attempt, attempts, asset.filename, error
+            )
+            sleep(RETRY_BACKOFF_SECONDS * attempt)
+    raise AssertionError("unreachable")
 
 
-def download_assets(assets: list[Asset], cache_dir: Path, workers: int) -> list[Path]:
+def download_assets(
+    assets: list[Asset],
+    cache_dir: Path,
+    workers: int,
+    *,
+    attempts: int = DOWNLOAD_ATTEMPTS,
+    fetch: BytesGetter = fetch_bytes,
+    sleep: Sleeper = time.sleep,
+) -> list[Path]:
     if workers < 1:
         raise ValueError("workers must be positive")
 
     results: list[Path] = []
     with ThreadPoolExecutor(max_workers=workers) as executor:
         futures = [
-            executor.submit(download_asset, asset, cache_dir) for asset in assets
+            executor.submit(
+                download_asset,
+                asset,
+                cache_dir,
+                attempts=attempts,
+                fetch=fetch,
+                sleep=sleep,
+            )
+            for asset in assets
         ]
         try:
             for future in as_completed(futures):
@@ -246,6 +387,7 @@ class BuildOptions:
     workers: int
     dem: Path | None
     stac_url: str
+    refresh_manifest: bool = False
 
 
 def parse_args(argv: Sequence[str] | None = None) -> BuildOptions:
@@ -266,6 +408,11 @@ def parse_args(argv: Sequence[str] | None = None) -> BuildOptions:
     build_parser.add_argument("--workers", type=int, default=4)
     build_parser.add_argument("--dem", type=Path)
     build_parser.add_argument("--stac-url", default=ITEMS_URL)
+    build_parser.add_argument(
+        "--refresh-manifest",
+        action="store_true",
+        help="re-read the STAC collection instead of reusing the cached manifest",
+    )
     namespace = parser.parse_args(argv)
     return BuildOptions(
         cache_dir=cast(Path, namespace.cache_dir),
@@ -274,6 +421,7 @@ def parse_args(argv: Sequence[str] | None = None) -> BuildOptions:
         workers=cast(int, namespace.workers),
         dem=cast(Path | None, namespace.dem),
         stac_url=cast(str, namespace.stac_url),
+        refresh_manifest=cast(bool, namespace.refresh_manifest),
     )
 
 
@@ -364,8 +512,13 @@ def build(options: BuildOptions) -> None:
     options.output_dir.parent.mkdir(parents=True, exist_ok=True)
 
     if options.dem is None:
-        assets = discover_assets(options.stac_url)
-        write_manifest(assets, options.cache_dir / "manifest.json")
+        manifest_path = options.cache_dir / "manifest.json"
+        assets = None if options.refresh_manifest else load_manifest(manifest_path)
+        if assets is None:
+            assets = select_assets(discover_assets(options.stac_url))
+            write_manifest(assets, manifest_path)
+        else:
+            logger.info("reusing manifest %s (%d COGs)", manifest_path, len(assets))
         rasters = download_assets(assets, options.cache_dir, options.workers)
     else:
         if not options.dem.is_file():

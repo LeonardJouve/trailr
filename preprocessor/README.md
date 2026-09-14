@@ -117,12 +117,18 @@ The container runs the same tippecanoe invocation as the workflow
 
 ## Generate elevation contour tiles locally
 
-The contour build uses all 2 m swissALTI3D COGs (about 44 GB across roughly
-43,500 tiles), so reserve at least 100 GB free. Downloads are SHA-256 verified,
-cached in `data/swissalti3d/`, and reused. Any network or checksum error aborts
-without replacing existing contour tiles.
+The contour build uses one 2 m swissALTI3D COG per 1 km² cell — the newest
+campaign available for that cell (43,650 COGs, about 37 GB), so reserve at
+least 100 GB free. The STAC collection lists every campaign from 2019 to 2025
+(80,485 COGs), and mosaicking those editions on top of each other would blend
+different survey vintages, so the build selects the newest per cell and records
+that choice in `data/swissalti3d/manifest.json`.
 
-Build the pinned tool image, then generate the full dataset:
+Downloads are SHA-256 verified, cached in `data/swissalti3d/`, and reused. A
+connection that closes mid-body now fails as "incomplete response" and is
+retried up to three times with backoff, so a transient reset no longer looks
+like a bad checksum. Build the pinned tool image, then generate the full
+dataset:
 
 ```bash
 docker build -f Dockerfile.contours -t trailr-contours .
@@ -140,7 +146,11 @@ docker run --rm -v ".:/work" trailr-contours build \
   --output-dir data/tiles/contours-smoke
 ```
 
-Use `--workers N` to override four parallel downloads. There are deliberately
-no retries: rerun the command after a failure; verified cached files are kept.
-Contour tiles are copied to the production tiles PVC manually and are never
-uploaded to GitHub.
+Use `--workers N` to override four parallel downloads. There are no retries
+*beyond* the three per asset: if an asset still fails, the build aborts without
+replacing existing contour tiles. Rerun the command afterwards — verified
+cached files and `data/swissalti3d/manifest.json` are kept, so the ~5 minute
+STAC crawl is skipped unless you pass `--refresh-manifest`. Contour tiles are
+copied to the production tiles PVC manually and are never uploaded to GitHub.
+Because each cell carries its own newest campaign, adjacent cells can come from
+different survey years; expect small elevation seams where they meet.
