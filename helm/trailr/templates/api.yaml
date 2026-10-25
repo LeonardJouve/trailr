@@ -24,6 +24,11 @@ spec:
             - -c
             - |
               set -eu
+              if [ -f /tiles/metadata.json ] && [ -d /tiles/8 ]; then
+                echo "tiles already present, skipping download"
+                exit 0
+              fi
+              find /tiles -mindepth 1 -delete
               apk add --no-cache unzip
               wget -qO /tiles/trails-tiles.zip "$TILES_URL"
               if [ -n "$TILES_SHA256" ]; then

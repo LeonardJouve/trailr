@@ -59,7 +59,11 @@ directory at startup. A `download-tiles` init container fetches
 `trails-tiles.zip` from the GitHub release into a pod-local volume, moves the
 extracted `{z}/{x}/{y}.pbf` tree to the volume root, and the API container
 serves it read-only via `TILES_DIR=/tiles`, so tiles are loaded at runtime and
-each pod re-downloads and unpacks the archive when it starts.
+each pod re-downloads and unpacks the archive when it starts. The volume
+survives container restarts within the same pod (e.g. a node reboot), so the
+init container skips the download when a complete extraction is already
+present and wipes the volume first otherwise; to pick up newer tiles, recreate
+the pod (`kubectl rollout restart`).
 
 The default source is
 `https://github.com/LeonardJouve/trailr/releases/latest/download/trails-tiles.zip`,
