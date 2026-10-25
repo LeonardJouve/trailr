@@ -19,7 +19,7 @@
     "trails": {
       "type": "vector",
       "tiles": [
-        "https://trail.famillejouve.ch/tiles/{z}/{x}/{y}.pbf"
+        "https://trail.jouve.ch/tiles/{z}/{x}/{y}.pbf"
       ],
       "minzoom": 8,
       "maxzoom": 15

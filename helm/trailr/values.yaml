@@ -2,7 +2,7 @@ apiImage: ghcr.io/leonardjouve/trailr-api:latest
 solverImage: ghcr.io/leonardjouve/trailr-solver:latest
 neo4jImage: neo4j:2026.06.0
 storage: 10Gi
-host: trail.famillejouve.ch
+host: trail.jouve.ch
 
 tilesBootstrap:
   url: https://github.com/LeonardJouve/trailr/releases/latest/download/trails-tiles.zip
