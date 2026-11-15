@@ -2,6 +2,7 @@ apiImage: ghcr.io/leonardjouve/trailr-api:latest
 solverImage: ghcr.io/leonardjouve/trailr-solver:latest
 neo4jImage: neo4j:2026.06.0
 storage: 10Gi
+storageClassName: local-path
 host: trail.jouve.ch
 
 tilesBootstrap:
