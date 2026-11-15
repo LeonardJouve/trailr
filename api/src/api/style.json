@@ -1,5 +1,6 @@
 {
   "version": 8,
+  "glyphs": "https://vectortiles.geo.admin.ch/fonts/{fontstack}/{range}.pbf",
   "sources": {
     "satellite": {
       "type": "raster",
@@ -25,12 +26,8 @@
       "maxzoom": 15
     },
     "swissnames3d": {
-      "type": "raster",
-      "tiles": [
-        "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissnames3d/default/current/3857/{z}/{x}/{y}.png"
-      ],
-      "tileSize": 256,
-      "maxzoom": 17,
+      "type": "vector",
+      "url": "https://vectortiles.geo.admin.ch/tiles/ch.swisstopo.base.vt/v1.0.0/tiles.json",
       "attribution": "© swisstopo"
     }
   },
@@ -118,9 +115,49 @@
       }
     },
     {
-      "id": "swissnames3d",
-      "type": "raster",
-      "source": "swissnames3d"
+      "id": "swissnames3d-places",
+      "type": "symbol",
+      "source": "swissnames3d",
+      "source-layer": "place",
+      "minzoom": 8,
+      "layout": {
+        "text-field": ["get", "name"],
+        "text-font": ["Frutiger Neue Condensed Regular"]
+      },
+      "paint": {
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1.5
+      }
+    },
+    {
+      "id": "swissnames3d-peaks",
+      "type": "symbol",
+      "source": "swissnames3d",
+      "source-layer": "mountain_peak",
+      "minzoom": 11,
+      "layout": {
+        "text-field": ["get", "name"],
+        "text-font": ["Frutiger Neue Italic"]
+      },
+      "paint": {
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1.5
+      }
+    },
+    {
+      "id": "swissnames3d-lakes",
+      "type": "symbol",
+      "source": "swissnames3d",
+      "source-layer": "water_name",
+      "minzoom": 9,
+      "layout": {
+        "text-field": ["get", "name"],
+        "text-font": ["Frutiger Neue Italic"]
+      },
+      "paint": {
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1.5
+      }
     }
   ]
 }
