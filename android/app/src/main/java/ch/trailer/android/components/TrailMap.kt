@@ -246,11 +246,13 @@ fun TrailMap(
                         }
 
                         Basemap.entries.forEach { bm ->
-                            style.getLayer(MapLayers.basemapLayerId(bm))?.setProperties(
-                                PropertyFactory.visibility(
-                                    if (bm == basemap) Property.VISIBLE else Property.NONE
+                            MapLayers.basemapLayerIds(bm).forEach { layerId ->
+                                style.getLayer(layerId)?.setProperties(
+                                    PropertyFactory.visibility(
+                                        if (bm == basemap) Property.VISIBLE else Property.NONE
+                                    )
                                 )
-                            )
+                            }
                         }
 
                         val selectedPointSource = map.style

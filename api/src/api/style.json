@@ -62,31 +62,31 @@
       }
     },
     {
-      "id": "contours",
+      "id": "contours-satellite",
       "type": "line",
       "source": "contours",
       "source-layer": "contours",
       "filter": ["!=", ["%", ["get", "elevation"], 100], 0],
       "paint": {
         "line-color": "#a0764a",
-        "line-opacity": 0.6,
-        "line-width": 0.6
+        "line-opacity": 0.7,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 13, 0.8, 15, 1.2]
       }
     },
     {
-      "id": "contours-index",
+      "id": "contours-satellite-index",
       "type": "line",
       "source": "contours",
       "source-layer": "contours",
       "filter": ["==", ["%", ["get", "elevation"], 100], 0],
       "paint": {
         "line-color": "#a0764a",
-        "line-opacity": 0.8,
-        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.6, 14, 1.4]
+        "line-opacity": 0.85,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 1, 15, 2.2]
       }
     },
     {
-      "id": "contours-labels",
+      "id": "contours-satellite-labels",
       "type": "symbol",
       "source": "contours",
       "source-layer": "contours",
@@ -96,12 +96,62 @@
         "symbol-placement": "line",
         "text-field": ["to-string", ["get", "elevation"]],
         "text-font": ["Frutiger Neue Condensed Regular"],
-        "text-size": 10
+        "text-size": 11
       },
       "paint": {
-        "text-color": "#7a5530",
+        "text-color": "#6e4a26",
         "text-halo-color": "#ffffff",
-        "text-halo-width": 1
+        "text-halo-width": 1.2
+      }
+    },
+    {
+      "id": "contours-topo",
+      "type": "line",
+      "source": "contours",
+      "source-layer": "contours",
+      "filter": ["!=", ["%", ["get", "elevation"], 100], 0],
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "line-color": "#303030",
+        "line-opacity": 0.7,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 13, 0.8, 15, 1.2]
+      }
+    },
+    {
+      "id": "contours-topo-index",
+      "type": "line",
+      "source": "contours",
+      "source-layer": "contours",
+      "filter": ["==", ["%", ["get", "elevation"], 100], 0],
+      "layout": {
+        "visibility": "none"
+      },
+      "paint": {
+        "line-color": "#303030",
+        "line-opacity": 0.85,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 1, 15, 2.2]
+      }
+    },
+    {
+      "id": "contours-topo-labels",
+      "type": "symbol",
+      "source": "contours",
+      "source-layer": "contours",
+      "minzoom": 13,
+      "filter": ["==", ["%", ["get", "elevation"], 100], 0],
+      "layout": {
+        "visibility": "none",
+        "symbol-placement": "line",
+        "text-field": ["to-string", ["get", "elevation"]],
+        "text-font": ["Frutiger Neue Condensed Regular"],
+        "text-size": 11
+      },
+      "paint": {
+        "text-color": "#202020",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1.2
       }
     },
     {

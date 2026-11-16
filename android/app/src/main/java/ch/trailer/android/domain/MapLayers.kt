@@ -20,9 +20,13 @@ object MapLayers {
         TourType.SKI -> "skitouren"
     }
 
-    fun basemapLayerId(basemap: Basemap): String = when (basemap) {
-        Basemap.SATELLITE -> "satellite"
-        Basemap.TOPO -> "topo"
+    /** Style layers shown with [basemap]: the raster plus contours coloured for it. */
+    fun basemapLayerIds(basemap: Basemap): List<String> {
+        val id = when (basemap) {
+            Basemap.SATELLITE -> "satellite"
+            Basemap.TOPO -> "topo"
+        }
+        return listOf(id, "contours-$id", "contours-$id-index", "contours-$id-labels")
     }
 
     fun sportIcon(type: TourType): ImageVector = when (type) {
