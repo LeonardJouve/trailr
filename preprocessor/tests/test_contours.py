@@ -415,11 +415,10 @@ class AnnotationTest(unittest.TestCase):
     def test_assigns_required_minimum_zoom(self):
         expected = {
             100: 8,
-            150: 11,
+            2500: 8,
             20: 13,
             40: 13,
-            10: 15,
-            30: 15,
+            120: 13,
         }
         self.assertEqual(
             {elevation: minzoom_for(elevation) for elevation in expected},
@@ -430,7 +429,7 @@ class AnnotationTest(unittest.TestCase):
         features = [
             {
                 "type": "Feature",
-                "properties": {"ID": 1, "elevation": 50.0},
+                "properties": {"ID": 1, "elevation": 100.0},
                 "geometry": {
                     "type": "LineString",
                     "coordinates": [[7.0, 46.0], [7.1, 46.1]],
@@ -458,16 +457,16 @@ class AnnotationTest(unittest.TestCase):
             actual = [json.loads(line) for line in target.read_text().splitlines()]
 
         self.assertEqual(count, 2)
-        self.assertEqual(actual[0]["properties"], {"elevation": 50})
-        self.assertEqual(actual[0]["tippecanoe"], {"minzoom": 11})
+        self.assertEqual(actual[0]["properties"], {"elevation": 100})
+        self.assertEqual(actual[0]["tippecanoe"], {"minzoom": 8})
         self.assertEqual(actual[1]["properties"], {"elevation": 20})
         self.assertEqual(actual[1]["tippecanoe"], {"minzoom": 13})
         self.assertEqual(actual[0]["geometry"], features[0]["geometry"])
 
-    def test_rejects_non_10m_elevation(self):
+    def test_rejects_non_20m_elevation(self):
         feature = {
             "type": "Feature",
-            "properties": {"elevation": 15.0},
+            "properties": {"elevation": 10.0},
             "geometry": {"type": "LineString", "coordinates": []},
         }
 
@@ -476,7 +475,7 @@ class AnnotationTest(unittest.TestCase):
             target = Path(tmp) / "contours.geojsonl"
             source.write_text(json.dumps(feature) + "\n", encoding="utf-8")
 
-            with self.assertRaisesRegex(ValueError, "10 m multiple"):
+            with self.assertRaisesRegex(ValueError, "20 m multiple"):
                 annotate_contours(source, target)
 
 
@@ -493,6 +492,11 @@ class BuildCommandTest(unittest.TestCase):
                 "gdalbuildvrt",
                 "-strict",
                 "-overwrite",
+                "-tr",
+                "10",
+                "10",
+                "-r",
+                "average",
                 "-input_file_list",
                 str(work / "inputs.txt"),
                 str(work / "dem.vrt"),
@@ -507,10 +511,12 @@ class BuildCommandTest(unittest.TestCase):
                 "GeoJSONSeq",
                 "-lco",
                 "RS=NO",
+                "-lco",
+                "COORDINATE_PRECISION=6",
                 "-a",
                 "elevation",
                 "-i",
-                "10",
+                "20",
                 "-nln",
                 "contours",
                 str(work / "dem.vrt"),
@@ -523,6 +529,7 @@ class BuildCommandTest(unittest.TestCase):
                 "tippecanoe",
                 "-P",
                 "--force",
+                "--drop-smallest-as-needed",
                 "-e",
                 str(staging),
                 "-Z8",

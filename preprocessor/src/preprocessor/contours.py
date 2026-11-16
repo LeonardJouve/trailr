@@ -27,6 +27,14 @@ RETRY_BACKOFF_SECONDS = 2.0
 # The collection holds every swissALTI3D campaign, so a 1 km cell appears once
 # per year it was flown. Contours need exactly one DEM per cell: the newest.
 SELECTION_NEWEST_PER_CELL = "newest_per_cell"
+# 20 m lines (zoom 13+) with 100 m index lines (zoom 8+), as on swisstopo maps.
+CONTOUR_INTERVAL_M = 20
+# Trace contours on a 10 m grid averaged from the 2 m COGs: 25x fewer cells,
+# ~5x fewer vertices, and the averaging smooths 2 m surface noise. Still finer
+# than a z15 tile pixel (~3 m at 46 deg N, 512 px tiles render at ~6 m).
+CONTOUR_GRID_M = 10
+# WGS84 decimals in the intermediate GeoJSON: 6 is ~0.1 m, far below the grid.
+COORDINATE_DECIMALS = 6
 CELL_PATTERN = re.compile(r"swissalti3d_(\d{4})_(\d{4}-\d{4})")
 
 JsonObject = dict[str, object]
@@ -335,13 +343,7 @@ def download_assets(
 
 
 def minzoom_for(elevation: int) -> int:
-    if elevation % 100 == 0:
-        return 8
-    if elevation % 50 == 0:
-        return 11
-    if elevation % 20 == 0:
-        return 13
-    return 15
+    return 8 if elevation % 100 == 0 else 13
 
 
 def annotate_contours(source: Path, target: Path) -> int:
@@ -364,9 +366,13 @@ def annotate_contours(source: Path, target: Path) -> int:
             if not isinstance(raw_elevation, int | float):
                 raise ValueError(f"feature {line_number} lacks numeric elevation")
             elevation = round(raw_elevation)
-            if abs(raw_elevation - elevation) > 1e-6 or elevation % 10 != 0:
+            if (
+                abs(raw_elevation - elevation) > 1e-6
+                or elevation % CONTOUR_INTERVAL_M != 0
+            ):
                 raise ValueError(
-                    f"feature {line_number} elevation is not a 10 m multiple"
+                    f"feature {line_number} elevation is not a "
+                    f"{CONTOUR_INTERVAL_M} m multiple"
                 )
 
             feature["properties"] = {"elevation": elevation}
@@ -433,6 +439,11 @@ def build_commands(
         "gdalbuildvrt",
         "-strict",
         "-overwrite",
+        "-tr",
+        str(CONTOUR_GRID_M),
+        str(CONTOUR_GRID_M),
+        "-r",
+        "average",
         "-input_file_list",
         str(work_dir / "inputs.txt"),
         str(work_dir / "dem.vrt"),
@@ -444,10 +455,12 @@ def build_commands(
         "GeoJSONSeq",
         "-lco",
         "RS=NO",
+        "-lco",
+        f"COORDINATE_PRECISION={COORDINATE_DECIMALS}",
         "-a",
         "elevation",
         "-i",
-        "10",
+        str(CONTOUR_INTERVAL_M),
         "-nln",
         "contours",
         str(work_dir / "dem.vrt"),
@@ -457,6 +470,9 @@ def build_commands(
         "tippecanoe",
         "-P",
         "--force",
+        # Only kicks in for tiles over 500 KB (dense Alpine z8-z12 index lines):
+        # drops the shortest lines, which are invisible at that zoom anyway.
+        "--drop-smallest-as-needed",
         "-e",
         str(staging_dir),
         "-Z8",

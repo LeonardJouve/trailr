@@ -135,7 +135,8 @@ docker build -f Dockerfile.contours -t trailr-contours .
 docker run --rm -v ".:/work" trailr-contours build
 ```
 
-Output: `data/tiles/contours/{z}/{x}/{y}.pbf`, zooms 8–15. The existing local
+Output: `data/tiles/contours/{z}/{x}/{y}.pbf`, zooms 8–15: 100 m index
+lines from zoom 8, 20 m lines from zoom 13. The existing local
 API mount serves it at `/tiles/contours/{z}/{x}/{y}.pbf`.
 
 For a small pipeline check:
