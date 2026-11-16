@@ -82,7 +82,7 @@
       "paint": {
         "line-color": "#a0764a",
         "line-opacity": 0.85,
-        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 1, 15, 2.2]
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.8, 15, 1.6]
       }
     },
     {
@@ -131,7 +131,7 @@
       "paint": {
         "line-color": "#303030",
         "line-opacity": 0.85,
-        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 1, 15, 2.2]
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.8, 15, 1.6]
       }
     },
     {
