@@ -24,27 +24,32 @@ spec:
             - -c
             - |
               set -eu
-              if [ -f /tiles/metadata.json ] && [ -d /tiles/8 ]; then
-                echo "tiles already present, skipping download"
-                exit 0
-              fi
+              # The volume survives container restarts within the pod; the
+              # marker is written last, so a partial run starts over.
+              [ -f /tiles/.complete ] && exit 0
               find /tiles -mindepth 1 -delete
               apk add --no-cache unzip
-              wget -qO /tiles/trails-tiles.zip "$TILES_URL"
-              if [ -n "$TILES_SHA256" ]; then
-                checksum="${TILES_SHA256#sha256:}"
-                echo "$checksum  /tiles/trails-tiles.zip" | sha256sum -c -
-              fi
-              unzip -oq /tiles/trails-tiles.zip -d /tiles/stage
-              mv /tiles/stage/output/tiles/* /tiles/
-              rm -rf /tiles/stage
-              rm /tiles/trails-tiles.zip
+              fetch() { # url sha256 destination
+                wget -qO /tiles/.download.zip "$1"
+                [ -z "$2" ] || echo "${2#sha256:}  /tiles/.download.zip" | sha256sum -c -
+                unzip -oq /tiles/.download.zip -d "$3"
+                rm /tiles/.download.zip
+              }
+              fetch "$TILES_URL" "$TILES_SHA256" /tiles/.stage
+              mv /tiles/.stage/output/tiles/* /tiles/
+              rm -r /tiles/.stage
+              [ -z "$CONTOURS_URL" ] || fetch "$CONTOURS_URL" "$CONTOURS_SHA256" /tiles
               test -d /tiles/8
+              touch /tiles/.complete
           env:
             - name: TILES_URL
               value: {{ .Values.tilesBootstrap.url | quote }}
             - name: TILES_SHA256
               value: {{ .Values.tilesBootstrap.sha256 | quote }}
+            - name: CONTOURS_URL
+              value: {{ .Values.contoursBootstrap.url | quote }}
+            - name: CONTOURS_SHA256
+              value: {{ .Values.contoursBootstrap.sha256 | quote }}
           volumeMounts:
             - name: tiles
               mountPath: /tiles

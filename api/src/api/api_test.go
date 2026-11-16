@@ -160,7 +160,7 @@ func TestStyleServed(t *testing.T) {
 	}
 
 	body := recorder.Body.String()
-	for _, layer := range []string{`"wanderwege"`, `"veloland"`, `"wanderland"`, `"mtbland"`, `"skitouren"`} {
+	for _, layer := range []string{`"wanderwege"`, `"veloland"`, `"wanderland"`, `"mtbland"`, `"skitouren"`, `"contours"`} {
 		if !strings.Contains(body, layer) {
 			t.Fatalf("style is missing source-layer %s", layer)
 		}

@@ -9,6 +9,10 @@ tilesBootstrap:
   url: https://github.com/LeonardJouve/trailr/releases/latest/download/trails-tiles.zip
   sha256: ""
 
+contoursBootstrap:
+  url: https://github.com/LeonardJouve/trailr/releases/download/contours-v1.0/contours-tiles.zip
+  sha256: "8810dc73ac8c6722f00948be21d85ba82731ef5d53fdce0d837495a905417f02"
+
 neo4jBootstrap:
   enabled: false
   url: https://github.com/LeonardJouve/trailr/releases/latest/download/trails.zip
